@@ -75,6 +75,7 @@ A simulated automotive system featuring a **Digital Instrument Cluster (IPC)** a
 - ISO 2575: Symbols for Controls and Tell-tales
 - Qt Documentation: [qt.io](https://doc.qt.io)
 - USB to CAN: [CANable-MKS](https://github.com/makerbase-mks/CANable-MKS/blob/main/User%20Manual/CANable%20V2.0/Makerbase%20CANable%20V2.0%20Use%20Manual.pdf)
+- SocketCAN: [SocketCAN - Controller Area Network — The Linux Kernel documentation](https://docs.kernel.org/networking/can.html)
 
 ## Contact
 
