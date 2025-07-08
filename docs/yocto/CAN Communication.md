@@ -1,0 +1,187 @@
+# CAN Communication
+
+## 1. Overall
+
+Since the Raspberry Pi 5 does not include a built-in CAN controller, a **USB-to-CAN adapter** is used to enable CAN bus communication. On Linux-based systems, this is typically handled through **SocketCAN**, a native Linux kernel feature that provides a network socket interface for CAN communication, similar to TCP/UDP networking.
+
+---
+
+## 2. Quick Testing with `can-utils`
+
+Once a USB-to-CAN device is connected and recognized by the system (e.g., `can0`), you can perform quick tests using `can-utils`.
+
+### Step 1: Install `can-utils`
+
+Install with `apt` (for testing on Raspberry Pi outside Yocto):
+
+```bash
+sudo apt install can-utils
+````
+
+Or add to your Yocto image:
+
+```bitbake
+IMAGE_INSTALL:append = " can-utils"
+```
+
+---
+
+### Step 2: Bring Up the CAN Interface
+
+Example: Set bitrate to 666666 bps for `can0`:
+
+```bash
+sudo ip link set can0 up type can bitrate 666666
+```
+
+Check the CAN interface status:
+
+```bash
+ip -details -statistics link show can0
+```
+
+---
+
+### Step 3: Send and Receive CAN Frames
+
+**Receive CAN frames**:
+
+```bash
+candump can0
+```
+
+**Send CAN frames**:
+
+```bash
+cansend can0 123#1122
+cansend can0 1ABCDEEF#010203
+```
+
+Where:
+
+- `123`: 11-bit CAN ID
+- `#1122`: Payload in hexadecimal (2 bytes)
+
+---
+
+### Step 4: Disable Interface
+
+```bash
+sudo ip link set can0 down
+```
+
+---
+
+### Loopback Mode (for internal testing):
+
+```bash
+sudo ip link set can0 down
+sudo ip link set can0 up type can bitrate 666666 loopback on
+```
+
+In **Terminal 1**:
+
+```bash
+candump can0
+```
+
+In **Terminal 2**:
+
+```bash
+cansend can0 123#AABBCCDD
+```
+
+---
+
+## 3. Using SocketCAN in C for VCU Development
+
+**SocketCAN** is integrated into the Linux kernel and provides a standard socket API for interacting with CAN devices.
+
+### 3.1 Required Headers
+
+```c
+#include <linux/can.h>
+#include <linux/can/raw.h>
+#include <sys/socket.h>
+#include <sys/ioctl.h>
+#include <net/if.h>
+#include <unistd.h>
+#include <string.h>
+```
+
+### 3.2 Basic Socket Initialization Steps
+
+```c
+// Step 1: Create socket
+int s = socket(PF_CAN, SOCK_RAW, CAN_RAW);
+
+// Step 2: Get interface index
+struct ifreq ifr;
+strcpy(ifr.ifr_name, "can0");
+ioctl(s, SIOCGIFINDEX, &ifr);
+
+// Step 3: Bind the socket
+struct sockaddr_can addr = {
+    .can_family = AF_CAN,
+    .can_ifindex = ifr.ifr_ifindex
+};
+bind(s, (struct sockaddr *)&addr, sizeof(addr));
+```
+
+---
+
+### 3.3 Sending a CAN Frame
+
+```c
+struct can_frame frame;
+frame.can_id = 0x123;
+frame.can_dlc = 8;
+memcpy(frame.data, "\x11\x22\x33\x44\x55\x66\x77\x88", 8);
+write(s, &frame, sizeof(frame));
+```
+
+---
+
+### 3.4 Receiving a CAN Frame
+
+```c
+read(s, &frame, sizeof(frame));
+printf("ID: 0x%X DLC: %d\n", frame.can_id, frame.can_dlc);
+```
+
+---
+
+### 3.5 Using Extended ID (29-bit)
+
+```c
+frame.can_id = 0x1FFFFFFF | CAN_EFF_FLAG;
+frame.can_dlc = 2;
+```
+
+---
+
+### 3.6 Setting CAN Filters
+
+```c
+struct can_filter rfilter[1];
+rfilter[0].can_id   = 0x123;
+rfilter[0].can_mask = CAN_SFF_MASK;
+
+setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER, &rfilter, sizeof(rfilter));
+```
+
+---
+
+## 4. Notes
+
+- **can-utils** is useful for testing, but not required for programming with SocketCAN.
+- All interactions are based on standard file descriptors, so you can use `poll()`, `select()`, or `epoll()` for asynchronous I/O.
+- USB-to-CAN adapter must be compatible with SocketCAN
+
+---
+
+## 5. References
+
+- Linux Kernel CAN Documentation: [SocketCAN - Controller Area Network — The Linux Kernel documentation](https://docs.kernel.org/networking/can.html)
+- can-utils GitHub: [linux-can/can-utils: Linux-CAN / SocketCAN user space applications](https://github.com/linux-can/can-utils)
+- USB to CAN open source: [makerbase-mks/CANable-MKS](https://github.com/makerbase-mks/CANable-MKS)
