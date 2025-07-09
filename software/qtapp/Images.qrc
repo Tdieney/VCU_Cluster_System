@@ -1,0 +1,13 @@
+<RCC>
+    <qresource prefix="/">
+        <file>images/sport_car.png</file>
+        <file>images/front_fog.png</file>
+        <file>images/high_beam_indicator.png</file>
+        <file>images/low_beam_indicator.png</file>
+        <file>images/malfunction_indicator.png</file>
+        <file>images/rear_fog.png</file>
+        <file>images/seatbelt.png</file>
+        <file>images/turn_left.png</file>
+        <file>images/turn_right.png</file>
+    </qresource>
+</RCC>
