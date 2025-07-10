@@ -1,0 +1,32 @@
+{
+  "relation": [
+    {
+      "name": "front_turn_left",
+      "source_ecu": "ECU2",
+      "source_signal": "dig_in_1",
+      "destination_ecu": "ECU7",
+      "destination_signal": "signal3"
+    },
+    {
+      "name": "front_turn_right",
+      "source_ecu": "ECU2",
+      "source_signal": "signal2",
+      "destination_ecu": "ECU7",
+      "destination_signal": "signal4"
+    },
+    {
+      "name": "rear_turn_left",
+      "source_ecu": "ECU3",
+      "source_signal": "signal1",
+      "destination_ecu": "ECU7",
+      "destination_signal": "signal5"
+    },
+    {
+      "name": "rear_turn_right",
+      "source_ecu": "ECU3",
+      "source_signal": "signal2",
+      "destination_ecu": "ECU7",
+      "destination_signal": "signal6"
+    }
+  ]
+}
