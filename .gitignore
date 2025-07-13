@@ -1,0 +1,48 @@
+# OS generated files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Icon?
+desktop.ini
+
+# IDE and editor folders/files
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# STM32CubeIDE/Eclipse project files
+*.launch
+*.settings/
+*.mxproject
+*.cproject
+*.project
+
+# STM32CubeIDE metadata and logs
+ecu_nodes/.metadata/
+ecu_nodes/.metadata/*
+ecu_nodes/.metadata/.plugins/
+ecu_nodes/.metadata/.plugins/**
+
+# Build output
+Debug/
+Release/
+build/
+*.o
+*.obj
+*.elf
+*.bin
+*.hex
+*.map
+*.out
+*.d
+
+# Qt Creator/Qt build artifacts (if present)
+*.pro.user
+*.qmake.stash
+*.qmake.cache
+moc_*
+ui_*
+qrc_*
+*.user
+*.autosave
