@@ -11,7 +11,6 @@ int main(int argc, char *argv[])
     QGuiApplication app(argc, argv);
 
     CanHandler canHandler; // Create an instance of CanHandler
-    canHandler.start();  // Start the CAN handler
 
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty("canHandler", &canHandler); // Expose CanHandler to QML
