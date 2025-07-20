@@ -96,7 +96,7 @@ void CAN_process_command(CAN_RxFrame *frame, DigitalOutput_Cmd_Frame *cmd_frame)
         for (uint8_t j = 0; j < BYTES_PER_FRAME; j++) {
           data[j] = frame->data[j];
         }
-        cmd_frame->sdu = *((uint64_t *)data);
+        cmd_frame[i].sdu = *((uint64_t *)data);
         break;
       }
     }
