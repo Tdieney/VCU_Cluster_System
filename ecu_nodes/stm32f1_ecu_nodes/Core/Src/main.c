@@ -23,8 +23,10 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "rb_can.h"
+#include "button.h"
+#include "can.h"
 #include <stdbool.h>
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -43,7 +45,12 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+ADC_HandleTypeDef hadc1;
+
 CAN_HandleTypeDef hcan;
+
+TIM_HandleTypeDef htim1;
+TIM_HandleTypeDef htim3;
 
 /* Definitions for CANRxHandlerTask */
 osThreadId_t CANRxHandlerTaskHandle;
@@ -60,13 +67,23 @@ const osThreadAttr_t CANTxHandlerTask_attributes = {
   .priority = (osPriority_t) osPriorityNormal,
 };
 /* USER CODE BEGIN PV */
-rb_CAN_Frame canTxQueue[CAN_TX_QUEUE_SIZE];
+CAN_Frame canTxQueue[CAN_TX_QUEUE_SIZE];
+
+DigitalOutput_Resp_Frame digital_output_data[NUMBER_OF_DIG_OUT_RES_FRAME] = {0};
+DigitalInput_Resp_Frame digital_input_data[NUMBER_OF_DIG_IN_RES_FRAME] = {0};
+
+CAN_RxFrame can_rx_frame;
+bool can_rx_flag = false;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_CAN_Init(void);
+static void MX_ADC1_Init(void);
+static void MX_TIM1_Init(void);
+static void MX_TIM3_Init(void);
 void CANRxHandler(void *argument);
 void CANTxHandler(void *argument);
 
@@ -76,14 +93,11 @@ void CANTxHandler(void *argument);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-CAN_RxFrame can_rx_frame;
-bool can_rx_flag = false;
-
-void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
-{
+void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
   HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &can_rx_frame.header, can_rx_frame.data);
   can_rx_flag = true;
 }
+
 /* USER CODE END 0 */
 
 /**
@@ -115,6 +129,9 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_CAN_Init();
+  MX_ADC1_Init();
+  MX_TIM1_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
   HAL_CAN_Start(&hcan);
   HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING);
@@ -178,6 +195,7 @@ void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
@@ -206,6 +224,57 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_ADC;
+  PeriphClkInit.AdcClockSelection = RCC_ADCPCLK2_DIV6;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
+
+/**
+  * @brief ADC1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_ADC1_Init(void)
+{
+
+  /* USER CODE BEGIN ADC1_Init 0 */
+
+  /* USER CODE END ADC1_Init 0 */
+
+  ADC_ChannelConfTypeDef sConfig = {0};
+
+  /* USER CODE BEGIN ADC1_Init 1 */
+
+  /* USER CODE END ADC1_Init 1 */
+  /** Common config
+  */
+  hadc1.Instance = ADC1;
+  hadc1.Init.ScanConvMode = ADC_SCAN_DISABLE;
+  hadc1.Init.ContinuousConvMode = DISABLE;
+  hadc1.Init.DiscontinuousConvMode = DISABLE;
+  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc1.Init.NbrOfConversion = 1;
+  if (HAL_ADC_Init(&hadc1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Configure Regular Channel
+  */
+  sConfig.Channel = ADC_CHANNEL_5;
+  sConfig.Rank = ADC_REGULAR_RANK_1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ADC1_Init 2 */
+
+  /* USER CODE END ADC1_Init 2 */
+
 }
 
 /**
@@ -259,16 +328,210 @@ static void MX_CAN_Init(void)
 }
 
 /**
+  * @brief TIM1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM1_Init(void)
+{
+
+  /* USER CODE BEGIN TIM1_Init 0 */
+
+  /* USER CODE END TIM1_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+  TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig = {0};
+
+  /* USER CODE BEGIN TIM1_Init 1 */
+
+  /* USER CODE END TIM1_Init 1 */
+  htim1.Instance = TIM1;
+  htim1.Init.Prescaler = 799;
+  htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim1.Init.Period = 999;
+  htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim1.Init.RepetitionCounter = 0;
+  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim1, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_Init(&htim1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
+  sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
+  if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_4) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;
+  sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;
+  sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;
+  sBreakDeadTimeConfig.DeadTime = 0;
+  sBreakDeadTimeConfig.BreakState = TIM_BREAK_DISABLE;
+  sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_HIGH;
+  sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;
+  if (HAL_TIMEx_ConfigBreakDeadTime(&htim1, &sBreakDeadTimeConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM1_Init 2 */
+
+  /* USER CODE END TIM1_Init 2 */
+  HAL_TIM_MspPostInit(&htim1);
+
+}
+
+/**
+  * @brief TIM3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM3_Init(void)
+{
+
+  /* USER CODE BEGIN TIM3_Init 0 */
+
+  /* USER CODE END TIM3_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+
+  /* USER CODE BEGIN TIM3_Init 1 */
+
+  /* USER CODE END TIM3_Init 1 */
+  htim3.Instance = TIM3;
+  htim3.Init.Prescaler = 799;
+  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim3.Init.Period = 999;
+  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_4) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM3_Init 2 */
+
+  /* USER CODE END TIM3_Init 2 */
+  HAL_TIM_MspPostInit(&htim3);
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
   */
 static void MX_GPIO_Init(void)
 {
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
 
   /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOB, BTN_COL0_Pin|BTN_COL1_Pin|BTN_COL2_Pin|BTN_COL3_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin : PC13 */
+  GPIO_InitStruct.Pin = GPIO_PIN_13;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : BTN_COL0_Pin BTN_COL1_Pin BTN_COL2_Pin BTN_COL3_Pin */
+  GPIO_InitStruct.Pin = BTN_COL0_Pin|BTN_COL1_Pin|BTN_COL2_Pin|BTN_COL3_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : BTN_ROW0_Pin BTN_ROW1_Pin BTN_ROW2_Pin BTN_ROW3_Pin */
+  GPIO_InitStruct.Pin = BTN_ROW0_Pin|BTN_ROW1_Pin|BTN_ROW2_Pin|BTN_ROW3_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI4_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(EXTI4_IRQn);
+
+  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
 
 }
 
@@ -286,17 +549,22 @@ static void MX_GPIO_Init(void)
 void CANRxHandler(void *argument)
 {
   /* USER CODE BEGIN 5 */
-  rb_DigitalOutput_Cmd_Frame digital_output_cmd_data[NUMBER_OF_DIG_OUT_CMD_FRAME] = {0};
+  DigitalOutput_Cmd_Frame digital_output_cmd_data[NUMBER_OF_DIG_OUT_CMD_FRAME] = {0};
+  
+  btn_matrix_init();
+  TIM3->CCR1 = 0; // Initialize PWM duty cycle to 0
   /* Infinite loop */
   for(;;)
   {
-    if (can_rx_flag == true)
-    {
+    if (can_rx_flag == true) {
       can_rx_flag = false; // Reset flag
 
       // Process received CAN message
-      rb_CAN_process_command(&can_rx_frame, digital_output_cmd_data);
+      CAN_process_command(&can_rx_frame, digital_output_cmd_data);
     }
+
+    btn_matrix_process(digital_input_data);
+
   }
   /* USER CODE END 5 */
 }
@@ -311,31 +579,50 @@ void CANRxHandler(void *argument)
 void CANTxHandler(void *argument)
 {
   /* USER CODE BEGIN CANTxHandler */
-  rb_DigitalOutput_Resp_Frame digital_output_data[NUMBER_OF_DIG_OUT_RES_FRAME] = {0};
-  
 
   // Initialize default values for Digital Output Response
-  for (uint8_t i = 0; i < NUMBER_OF_DIG_OUT_RES_FRAME; i++)
-  {
-    for (uint8_t j = 0; j < RB_DIGITAL_OUT_RESP_SIGNAL_COUNT; j++)
-    {
+  for (uint8_t i = 0; i < NUMBER_OF_DIG_OUT_RES_FRAME; i++) {
+    for (uint8_t j = 0; j < DIGITAL_OUT_RESP_SIGNAL_PER_FRAME; j++) {
       digital_output_data[i].signal[j].statusPS = 0; // Off
       digital_output_data[i].signal[j].elDiagnosis = 0; // OK
       digital_output_data[i].signal[j].currentFB = 5; // 10mA
     }
   }
+
+  // Initialize Digital Input Response Frame
+  for (uint8_t i = 0; i < NUMBER_OF_DIG_IN_RES_FRAME; i++) {
+    for (uint8_t j = 0; j < DIGITAL_IN_RESP_SIGNAL_PER_FRAME; j++) {
+      digital_input_data[i].signal[j].inputStatus = 0; // Off
+      digital_input_data[i].signal[j].freshness = 0;
+      digital_input_data[i].signal[j].elDiagnosis = 0; // OK
+    }
+  }
+
   /* Infinite loop */
   for(;;)
   {
-    rb_CAN_Frame tx_frame;
-    for (uint8_t i = 0; i < NUMBER_OF_DIG_OUT_RES_FRAME; i++)
-    {
+    CAN_Frame tx_frame;
+
+    // Prepare Digital Output Response Frame
+    for (uint8_t i = 0; i < NUMBER_OF_DIG_OUT_RES_FRAME; i++) {
       tx_frame.id = DIGITAL_OUTPUT_RES_ID(i);
       memcpy(tx_frame.data, &digital_output_data[i].sdu, sizeof(digital_output_data[i].sdu));
-      rb_CAN_EnqueueTxFrame(&tx_frame, canTxQueue);
+      CAN_EnqueueTxFrame(&tx_frame, canTxQueue);
     }
-    
-    rb_CAN_send(&hcan, canTxQueue);
+
+    // Prepare Digital Input Response Frame
+    for (uint8_t i = 0; i < NUMBER_OF_DIG_IN_RES_FRAME; i++) {
+      for (uint8_t j = 0; j < DIGITAL_IN_RESP_SIGNAL_PER_FRAME; j++) {
+        digital_input_data[i].signal[j].freshness++;
+      }
+    }
+    for (uint8_t i = 0; i < NUMBER_OF_DIG_IN_RES_FRAME; i++){
+      tx_frame.id = DIGITAL_INPUT_RES_ID(i);
+      memcpy(tx_frame.data, &digital_input_data[i].sdu, sizeof(digital_input_data[i].sdu));
+      CAN_EnqueueTxFrame(&tx_frame, canTxQueue);
+    }
+
+    CAN_send(&hcan, canTxQueue);
 
     osDelay(50);
   }

@@ -14,9 +14,6 @@ desktop.ini
 # STM32CubeIDE/Eclipse project files
 *.launch
 *.settings/
-*.mxproject
-*.cproject
-*.project
 
 # STM32CubeIDE metadata and logs
 ecu_nodes/.metadata/
