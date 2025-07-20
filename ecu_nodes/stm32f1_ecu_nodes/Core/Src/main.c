@@ -88,6 +88,13 @@ void CANRxHandler(void *argument);
 void CANTxHandler(void *argument);
 
 /* USER CODE BEGIN PFP */
+/**
+  * @brief  Process Digital Output Commands
+  * @param  digital_output_cmd_data: Pointer to the Digital Output Command Frame
+  *                                   containing the commands to process
+  * @retval None
+  */
+void digital_output_process(DigitalOutput_Cmd_Frame *digital_output_cmd_data);
 
 /* USER CODE END PFP */
 
@@ -133,6 +140,15 @@ int main(void)
   MX_TIM1_Init();
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
+  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
+  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3);
+  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4);
+
   HAL_CAN_Start(&hcan);
   HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING);
 
@@ -536,7 +552,69 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+/**
+  * @brief  Process Digital Output Commands
+  * @param  digital_output_cmd_data: Pointer to the Digital Output Command Frame
+  *                                   containing the commands to process
+  * @retval None
+  */
+void digital_output_process(DigitalOutput_Cmd_Frame *digital_output_cmd_data) {
+  // Digital Output 1
+  if (digital_output_cmd_data[0].signal[0].switchCmd == 1) {
+    TIM1->CCR4 = (digital_output_cmd_data[0].signal[0].dutyCycle * 10U) - 1U;
+  } else {
+    TIM1->CCR4 = 0;
+  }
 
+  // Digital Output 10
+  if (digital_output_cmd_data[1].signal[1].switchCmd == 1) {
+    TIM1->CCR3 = (digital_output_cmd_data[1].signal[1].dutyCycle * 10U) - 1U;
+  } else {
+    TIM1->CCR3 = 0;
+  }
+
+  // Digital Output 19
+  if (digital_output_cmd_data[2].signal[2].switchCmd == 1) {
+    TIM1->CCR2 = (digital_output_cmd_data[2].signal[2].dutyCycle * 10U) - 1U;
+  } else {
+    TIM1->CCR2 = 0;
+  }
+
+  // Digital Output 28
+  if (digital_output_cmd_data[3].signal[3].switchCmd == 1) {
+    TIM1->CCR1 = (digital_output_cmd_data[3].signal[3].dutyCycle * 10U) - 1U;
+  } else {
+    TIM1->CCR1 = 0;
+  }
+
+  // Digital Output 8
+  // if (digital_output_cmd_data[0].signal[7].switchCmd == 1) {
+  //   TIM3->CCR1 = (digital_output_cmd_data[0].signal[7].dutyCycle * 10U) - 1U;
+  // } else {
+  //   TIM3->CCR1 = 0;
+  // }
+
+  // Digital Output 12
+  if (digital_output_cmd_data[1].signal[3].switchCmd == 1) {
+    TIM3->CCR2 = (digital_output_cmd_data[1].signal[3].dutyCycle * 10U) - 1U;
+  } else {
+    TIM3->CCR2 = 0;
+  }
+
+  // Digital Output 22
+  if (digital_output_cmd_data[2].signal[5].switchCmd == 1) {
+    TIM3->CCR3 = (digital_output_cmd_data[2].signal[5].dutyCycle * 10U) - 1U;
+  } else {
+    TIM3->CCR3 = 0;
+  }
+
+  // Digital Output 32
+  if (digital_output_cmd_data[3].signal[7].switchCmd == 1) {
+    TIM3->CCR4 = (digital_output_cmd_data[3].signal[7].dutyCycle * 10U) - 1U;
+  } else {
+    TIM3->CCR4 = 0;
+  }
+}
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_CANRxHandler */
@@ -552,7 +630,7 @@ void CANRxHandler(void *argument)
   DigitalOutput_Cmd_Frame digital_output_cmd_data[NUMBER_OF_DIG_OUT_CMD_FRAME] = {0};
   
   btn_matrix_init();
-  TIM3->CCR1 = 0; // Initialize PWM duty cycle to 0
+  TIM3->CCR1 = 999; // Initialize PWM duty cycle to 999
   /* Infinite loop */
   for(;;)
   {
@@ -564,6 +642,8 @@ void CANRxHandler(void *argument)
     }
 
     btn_matrix_process(digital_input_data);
+
+    digital_output_process(digital_output_cmd_data);
 
   }
   /* USER CODE END 5 */
