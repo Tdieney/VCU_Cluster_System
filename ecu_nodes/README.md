@@ -1,6 +1,10 @@
 # ECU Nodes Firmware
 
-This directory contains the firmware source code for the STM32F1-based Electronic Control Unit (ECU) nodes used in the VCU Cluster System project.
+Due to proprietary restrictions, detailed information and images of the actual ECU hardware used in the VCU Cluster System project cannot be made public.
+
+Therefore, this firmware is designed to simulate the behavior of selected ECU functionalities using STM32F1 microcontrollers. It serves as a functional prototype that mimics basic operations such as digital input/output control, CAN communication, and ADC/PWM signal handling.
+
+This approach enables safe testing and integration with the Embedded Linux system without disclosing any confidential hardware details.
 
 ## Structure
 
@@ -11,7 +15,7 @@ This directory contains the firmware source code for the STM32F1-based Electroni
 ## Features
 
 - CAN communication protocol for digital input/output control.
-- FreeRTOS-based multitasking (Rx/Tx handlers).
+- FreeRTOS-based multitasking (CMSIS OS API v2).
 - Modular and scalable code structure for automotive applications.
 
 ## I/O Connection
@@ -39,3 +43,11 @@ The table below describes the connection diagram of ECU nodes simulated by STM32
 | PB7           | GPIO_EXTI7   | BTN_ROW3        | Button matrix (row 4)           |
 | PB8           | CAN_RX       | -               | CAN transceiver (CRX)           |
 | PB9           | CAN_TX       | -               | CAN transceiver (CTX)           |
+
+## Hardware Setup
+
+The following image illustrates the STM32F1-based ECU simulation board, including peripheral connections such as LEDs, buttons, potentiometer, and CAN transceiver.
+
+<p align="center">
+    <img src="img/stm32f1_ecu_node.jpg" alt="Image">
+</p>
