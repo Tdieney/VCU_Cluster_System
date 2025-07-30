@@ -1,7 +1,8 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
-#include "canhandler.h"
+#include "communication/canhandler.h"
 #include <QQmlContext>
+#include <QDir>
 
 int main(int argc, char *argv[])
 {
@@ -10,11 +11,19 @@ int main(int argc, char *argv[])
 #endif
     QGuiApplication app(argc, argv);
 
+    // qDebug() << "Current working dir:" << QDir::currentPath();
     CanHandler canHandler; // Create an instance of CanHandler
 
+    QObject::connect(&app, &QCoreApplication::aboutToQuit, [](){
+        system(IP_CMD_DOWN_CAN0);
+        qDebug() << "CAN interface down command executed.";
+        return 0; // Ensure the application exits cleanly
+    });
+
     QQmlApplicationEngine engine;
+
     engine.rootContext()->setContextProperty("canHandler", &canHandler); // Expose CanHandler to QML
-    
+
     const QUrl url(QStringLiteral("qrc:/main.qml"));
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
                      &app, [url](QObject *obj, const QUrl &objUrl) {

@@ -5,8 +5,10 @@ QT += quick
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
-        canhandler.cpp \
+        communication/canhandler.cpp \
         main.cpp
+
+HEADERS += communication/canhandler.h
 
 RESOURCES += qml.qrc \
     Images.qrc
@@ -23,4 +25,11 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 HEADERS += \
-    canhandler.h
+    communication/canhandler.h
+
+DISTFILES +=
+
+json.path = $$OUT_PWD/configs
+json.files = $$PWD/configs/io_config.json
+
+INSTALLS += json
