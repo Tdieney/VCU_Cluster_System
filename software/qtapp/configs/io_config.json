@@ -1,0 +1,14 @@
+{
+  "inputs": {
+    "ignition": 0,
+    "turn_left_switch": 9,
+    "turn_right_switch": 18,
+    "hazard_switch": 27
+  },
+  "outputs": {
+    "left_front_light": 0,
+    "left_rear_light": 9,
+    "right_front_light": 18,
+    "right_rear_light": 27
+  }
+}
