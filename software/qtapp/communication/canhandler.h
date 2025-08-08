@@ -12,8 +12,10 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonValue>
+#include <QTimer>
+#include <QTimer>
 
-#define IP_CMD_SET_CAN0_PARAMS  "sudo ip link set can0 type can bitrate 666666"
+#define IP_CMD_SET_CAN0_PARAMS  "sudo ip link set can0 type can bitrate 1000000"
 #define IP_CMD_UP_CAN0          "sudo ip link set can0 up"
 #define IP_CMD_DOWN_CAN0        "sudo ip link set can0 down"
 
@@ -31,6 +33,8 @@
 #define DIGITAL_OUT_RESP_SIGNAL_PER_FRAME 4U
 #define DIGITAL_IN_RESP_SIGNAL_PER_FRAME  8U
 
+#define BYTES_PER_CAN_FRAME               8U
+
 struct IOConfig {
     QMap<QString, uint8_t> inputs;
     QMap<QString, uint8_t> outputs;
@@ -41,6 +45,9 @@ struct inputSignal {
     bool turn_left_switch = false;
     bool turn_right_switch = false;
     bool hazard_switch = false;
+    bool high_beam_switch = false;
+    bool low_beam_switch = false;
+    bool parking_lights_switch = false;
 };
 
 struct outputSignal {
@@ -48,6 +55,10 @@ struct outputSignal {
     bool left_rear_light = false;
     bool right_front_light = false;
     bool right_rear_light = false;
+    uint8_t left_front_light_pos = 0;
+    uint8_t left_rear_light_pos = 0;
+    uint8_t right_front_light_pos = 0;
+    uint8_t right_rear_light_pos = 0;
 };
 
 /*
@@ -74,6 +85,11 @@ private:
     bool m_running;
     QMutex m_mutex;
     QQueue<struct can_frame> m_queue;
+
+signals:
+    void leftLightChanged(bool leftLight);
+    void rightLightChanged(bool rightLight);
+    void hazardLightsChanged(bool hazardLights);
 };
 
 class CanRxThread : public QThread {
@@ -88,12 +104,22 @@ protected:
     void run() override;
 
 signals:
-    void leftLightChanged(bool leftLight);
-    void rightLightChanged(bool rightLight);
+    void highBeamChanged(bool highBeam);
+    void lowBeamChanged(bool lowBeam);
+    void parkingLightsChanged(bool parkingLights);
 
 private:
     int m_socket;
     bool m_running;
+};
+
+class DataProcessing : public QObject {
+    Q_OBJECT
+public:
+    DataProcessing();
+    QTimer *timer;
+public slots:
+    void DataProcessingTask();
 };
 
 class CanHandler : public QObject {
@@ -102,15 +128,18 @@ public:
     explicit CanHandler(QObject *parent = nullptr);
     ~CanHandler();
 
-    void sendMessage(const struct can_frame &frame);
-
 signals:
     void leftLightChanged(bool leftLight);
     void rightLightChanged(bool rightLight);
+    void hazardLightsChanged(bool hazardLights);
+    void highBeamChanged(bool highBeam);
+    void lowBeamChanged(bool lowBeam);
+    void parkingLightsChanged(bool parkingLights);
 
 private:
     CanTxThread *m_txThread;
     CanRxThread *m_rxThread;
+    DataProcessing *m_dataProcessing;
 };
 
 #endif // CANHANDLER_H

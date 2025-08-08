@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/">
+        <file>fonts/Aldrich-Regular.ttf</file>
+    </qresource>
+</RCC>

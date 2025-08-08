@@ -19,281 +19,341 @@ ApplicationWindow {
         console.log("Screen size:", Screen.width, Screen.height)
     }
 
+    property real minSpeed: 0
+    property real maxSpeed: 180
+
+    readonly property real minRot:  -108
+    readonly property real maxRot:   108
+
     property int speed: 0
     property string gear: "D"
-    property int battery: 0
+    property int battery: 37
     property string time: {
         var now = new Date()
         now.setHours(now.getHours() + 7)  // For VietNam
         return Qt.formatTime(now, "hh:mm")
     }
+    property string date: {
+        var now = new Date()
+        now.setHours(now.getHours() + 7)  // For VietNam
+        return Qt.formatDate(now, "dd/MM/yyyy")
+    }
     property string temp: "28°C"
-    property int odometer: 3813
+    property int odometer: 38923
     property int trip: 443
 
     Timer {
         interval: 100; running: true; repeat: true
         onTriggered: {
-            speed = (speed + 1) % 300
-            battery = Math.max(0, battery + 1) % 100
+            speed = (speed + 1) % 181
+            battery = Math.max(0, battery + 1) % 101
             time = Qt.formatTime(new Date(), "hh:mm")
+            date = Qt.formatDate(new Date(), "dd/MM/yyyy")
         }
     }
 
-    GridLayout {
-        id: gridIcon
-        columns: 2
-        rows: 3
-        rowSpacing: 20
-        columnSpacing: 20
+    FontLoader {
+        id: myFont
+        source: "qrc:/fonts/Aldrich-Regular.ttf"
+    }
 
-        anchors.top: parent.top
-        anchors.left: parent.left
-        anchors.margins: 10
+    Image {
+        id: backgroundImage
+        source: "qrc:/images/background.png"
+        anchors.fill: parent
+        fillMode: Image.PreserveAspectFit
+        z: 0
+    }
+
+    Image {
+        id: centreArrowImage
+        source: "qrc:/images/centre.png"
+        x: (window.width - centreArrowImage.width) / 2
+        y: (window.height - centreArrowImage.height) / 2 + 6
+        fillMode: Image.PreserveAspectFit
+        z: 2
+    }
+
+    Image {
+        id: arrowImage
+        source: "qrc:/images/arrow.png"
+        x: (window.width - arrowImage.width) / 2
+        y: (window.height - arrowImage.height) / 2 - 1
+        rotation : speedToRotation(speed)
+        z: 1
+    }
+
+    Rectangle {
+        id: highBeamRec
+        width: 40
+        height: 40
+        x: 293
+        y: 6
+        color: "transparent"
 
         Image {
+            id: highBeamImage
             source: "qrc:/images/high_beam.png"
-            Layout.preferredWidth: 45
-            Layout.preferredHeight: 45
-            fillMode: Image.PreserveAspectFit
-        }
-
-        Image {
-            source: "qrc:/images/low_beam.png"
-            Layout.preferredWidth: 45
-            Layout.preferredHeight: 45
-            fillMode: Image.PreserveAspectFit
-        }
-
-        Image {
-            source: "qrc:/images/front_fog.png"
-            Layout.preferredWidth: 45
-            Layout.preferredHeight: 45
-            fillMode: Image.PreserveAspectFit
-        }
-
-        Image {
-            source: "qrc:/images/seatbelt.png"
-            Layout.preferredWidth: 45
-            Layout.preferredHeight: 45
-            fillMode: Image.PreserveAspectFit
-        }
-
-        Image {
-            source: "qrc:/images/malfunction_indicator.png"
-            Layout.preferredWidth: 45
-            Layout.preferredHeight: 45
-            fillMode: Image.PreserveAspectFit
-        }
-
-
-    }
-
-    Rectangle {
-        id: carRec
-        width: 450
-        height: 350
-        x: 40
-        y: (parent.height - carRec.height) / 2 + 60
-        color: "transparent"
-
-        Image {
-            source: "qrc:/images/sport_car.png"
-            width: parent.width
-            height: parent.height
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.horizontalCenter: parent.horizontalCenter
-            fillMode: Image.PreserveAspectFit
-        }
-    }
-
-    Rectangle {
-        id: speedRec
-        width: 450
-        height: 450
-        x: 510
-        y: (parent.height - speedRec.height) / 2 - 10
-        color: "transparent"
-
-        ColumnLayout {
-            anchors.centerIn: parent
-            spacing: 10
-
-            Text {
-                text: speed
-                font.pixelSize: 120
-                horizontalAlignment: Text.AlignHCenter
-                Layout.alignment: Qt.AlignHCenter
-            }
-
-            Text {
-                text: "KM/H"
-                font.pixelSize: 30
-                horizontalAlignment: Text.AlignHCenter
-                Layout.alignment: Qt.AlignHCenter
-            }
-
-            Item {
-                height: 5
-            }
-
-            Rectangle {
-                id: barBg
-                width: 350
-                height: 10
-                radius: 3
-                color: "#AAAAAA"
-                Layout.alignment: Qt.AlignHCenter
-
-                Rectangle {
-                    width: barBg.width * Math.min(speed / 300, 1)
-                    height: barBg.height
-                    radius: barBg.radius
-//                    color: "#F7A5B9"
-                    color: "#3CB371"
-                }
-            }
-        }
-    }
-
-    Rectangle {
-        id: turnSignalRec
-        width: 430
-        height: 100
-        x: speedRec.x + (speedRec.width - turnSignalRec.width) / 2
-        y: speedRec.y + 50
-        color: "transparent"
-
-        RowLayout {
+            visible: false
             anchors.fill: parent
-            anchors.margins: 10
+            fillMode: Image.PreserveAspectFit
+        }
+    }
 
-            Image {
-                source: "qrc:/images/left_arrow.png"
-                Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
-                fillMode: Image.PreserveAspectFit
-                width: 48
-                height: 48
-            }
+    Rectangle {
+        id: lowBeamRec
+        width: 40
+        height: 40
+        x: 376
+        y: 9
+        color: "transparent"
 
-            Item {
-                Layout.fillWidth: true
-            }
+        Image {
+            id: lowBeamImage
+            source: "qrc:/images/low_beam.png"
+            visible: false
+            anchors.fill: parent
+            fillMode: Image.PreserveAspectFit
+        }
+    }
 
-            // Xi nhan phải (căn phải)
-            Image {
-                source: "qrc:/images/right_arrow.png"
-                Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                fillMode: Image.PreserveAspectFit
-                width: 48
-                height: 48
+    Rectangle {
+        id: parkingLightsRec
+        width: 40
+        height: 40
+        x: 612
+        y: 7
+        color: "transparent"
+
+        Image {
+            id: parkingLightsImage
+            source: "qrc:/images/parking_lights.png"
+            visible: false
+            anchors.fill: parent
+            fillMode: Image.PreserveAspectFit
+        }
+    }
+
+    Rectangle {
+        id: hazardLightsRec
+        width: 40
+        height: 40
+        x: 692
+        y: 7
+        color: "transparent"
+
+        Image {
+            id: hazardLightsImage
+            source: "qrc:/images/hazard.png"
+            visible: false
+            anchors.fill: parent
+            fillMode: Image.PreserveAspectFit
+        }
+    }
+
+    Rectangle {
+        id: turnLeftRec
+        width: 40
+        height: 40
+        x: 39
+        y: 77
+        color: "transparent"
+
+        Image {
+            id: turnLeftImage
+            source: "qrc:/images/left_arrow.png"
+            visible: false
+            anchors.fill: parent
+            fillMode: Image.PreserveAspectFit
+        }
+    }
+
+    Rectangle {
+        id: turnRightRec
+        width: 40
+        height: 40
+        x: 945
+        y: 77
+        color: "transparent"
+
+        Image {
+            id: turnRightImage
+            source: "qrc:/images/right_arrow.png"
+            visible: false
+            anchors.fill: parent
+            fillMode: Image.PreserveAspectFit
+        }
+    }
+
+    Text {
+        text: "Distance"
+        x: 770
+        y: 212
+        color: "#EF4D7D"
+        font.family: myFont.name
+        font.pixelSize: 32
+        horizontalAlignment: Text.AlignLeft
+    }
+
+    Text {
+        text: "230 KM"
+        x: 770
+        y: 256
+        color: "white"
+        font.family: myFont.name
+        font.pixelSize: 32
+        horizontalAlignment: Text.AlignLeft
+    }
+
+    Text {
+        text: "Temperature"
+        x: 770
+        y: 312
+        color: "#EF4D7D"
+        font.family: myFont.name
+        font.pixelSize: 32
+        horizontalAlignment: Text.AlignLeft
+    }
+
+    Text {
+        text: temp
+        x: 770
+        y: 356
+        color: "white"
+        font.family: myFont.name
+        font.pixelSize: 32
+        horizontalAlignment: Text.AlignLeft
+    }
+
+    Rectangle {
+        id: batRec
+        width: 64 * (battery / 100)
+        height: 24
+        x: 773
+        y: 557
+        radius: 3
+
+        color: {
+            if (battery > 50) return "#36c75b"
+            else if (battery > 20) return "#fbca0a"
+            else return "#f70e02"
+        }
+
+        Behavior on color {
+            ColorAnimation {
+                duration: 500
             }
+        }
+    }
+
+    Rectangle {
+        id: batTextRec
+        width: 100
+        height: 45
+        x: 850
+        y: 556
+        color: "transparent"
+
+        Text {
+            id: batText
+            text: battery + "%"
+            color: "white"
+            font.family: myFont.name
+            font.pixelSize: 32
+            anchors.right: parent.right
+            horizontalAlignment: Text.AlignLeft
+        }
+    }
+
+    Text {
+        id: timeText
+        text: time
+        x: (window.width - timeText.width) / 2
+        y: 15
+        color: "white"
+        font.family: myFont.name
+        font.pixelSize: 32
+        horizontalAlignment: Text.AlignHCenter
+    }
+
+    Text {
+        id: dateText
+        text: date
+        x: 780
+        y: 21
+        color: "white"
+        font.family: myFont.name
+        font.pixelSize: 32
+        horizontalAlignment: Text.AlignHCenter
+    }
+
+    Text {
+        text: "ODO:"
+        x: 37
+        y: 21
+        color: "white"
+        font.family: myFont.name
+        font.pixelSize: 32
+        horizontalAlignment: Text.AlignHCenter
+    }
+
+    Rectangle {
+        id: odometerRec
+        width: 115
+        height: 50
+        x: 128
+        y: 21
+        color: "transparent"
+
+        Text {
+            id: odometerText
+            text: odometer
+            color: "white"
+            font.family: myFont.name
+            font.pixelSize: 32
+            anchors.right: parent.right
+            horizontalAlignment: Text.AlignRight
         }
     }
 
     Rectangle {
         id: gearRec
-        width: 100
-        height: 450
-        x: 940
-        y: (parent.height - gearRec.height) / 2
+        width: 202
+        height: 50
+        x: 65
+        y: 547
         color: "transparent"
 
         // Gear selector
-        ColumnLayout {
+        RowLayout {
             anchors.centerIn: parent
-            spacing: 10
+            spacing: 20
 
             Repeater {
                 model: ["P", "R", "N", "D"]
                 delegate: Text {
                     text: modelData
                     font.pixelSize: 32
-                    color: gear === modelData ? "black" : "lightgray"
+                    font.family: myFont.name
+                    color: gear === modelData ? "white" : "#AAAAAA"
                     horizontalAlignment: Text.AlignRight
                 }
             }
         }
     }
 
-    Rectangle {
-        id: bottomInfoBar
-        width: parent.width
-        height: 60
-        color: "transparent"
-        anchors.bottom: parent.bottom
+    Connections {
+        target: canHandler
+        onLeftLightChanged: turnLeftImage.visible = leftLight
+        onRightLightChanged: turnRightImage.visible = rightLight
+        onHazardLightsChanged: hazardLightsImage.visible = hazardLights
+        onHighBeamChanged: highBeamImage.visible = highBeam
+        onLowBeamChanged: lowBeamImage.visible = lowBeam
+        onParkingLightsChanged: parkingLightsImage.visible = parkingLights
+    }
 
-        RowLayout {
-            id: infoLayout
-            anchors.fill: parent
-            anchors.margins: 10
-            spacing: 40
-
-            // Time
-            Text {
-                text: time
-                font.pixelSize: 24
-                color: "black"
-            }
-
-            // Temperature
-            Text {
-                text: temp
-                font.pixelSize: 24
-                color: "black"
-            }
-
-            // Spacer
-            Item { Layout.fillWidth: true }
-
-            // Trip / Odometer
-            Text {
-                text: trip + "KM / " + odometer + "KM"
-                font.pixelSize: 24
-                color: "gray"
-                horizontalAlignment: Text.AlignHCenter
-            }
-
-            // Spacer
-            Item { Layout.fillWidth: true }
-
-            // Battery status
-            RowLayout {
-                spacing: 8
-
-                Rectangle {
-                    width: 100
-                    height: 24
-                    radius: 3
-                    color: "lightgray"
-
-                    Rectangle {
-                        width: parent.width * (battery / 100)
-                        height: parent.height
-                        radius: 3
-
-                        color: {
-                            if (battery > 50) return "green"
-                            else if (battery > 20) return "orange"
-                            else return "red"
-                        }
-
-                        Behavior on color {
-                            ColorAnimation {
-                                duration: 500
-                            }
-                        }
-                    }
-                }
-
-                Text {
-                    text: battery + "%"
-                    font.pixelSize: 22
-                    color: "black"
-                    Layout.preferredWidth: 50
-                    horizontalAlignment: Text.AlignLeft
-                }
-            }
-        }
+    function speedToRotation(speed) {
+        var t = (speed - minSpeed) / (maxSpeed - minSpeed)
+        return minRot + (maxRot - minRot) * t
     }
 }

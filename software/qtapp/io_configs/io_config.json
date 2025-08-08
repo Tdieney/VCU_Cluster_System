@@ -3,7 +3,10 @@
     "ignition": 0,
     "turn_left_switch": 9,
     "turn_right_switch": 18,
-    "hazard_switch": 27
+    "hazard_switch": 27,
+    "high_beam_switch": 1,
+    "low_beam_switch": 10,
+    "parking_lights_switch": 19
   },
   "outputs": {
     "left_front_light": 0,
