@@ -102,6 +102,12 @@ void Error_Handler(void);
 #define TWO                     2U
 #define THREE                   3U
 #define FOUR                    4U
+#define FIVE                    5U
+#define SIX                     6U
+#define SEVEN                   7U
+#define EIGHT                   8U
+#define NINE                    9U
+#define TEN                     10U
 
 /* USER CODE END Private defines */
 

@@ -46,6 +46,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
+DMA_HandleTypeDef hdma_adc1;
 
 CAN_HandleTypeDef hcan;
 
@@ -67,20 +68,23 @@ const osThreadAttr_t CANTxHandlerTask_attributes = {
   .priority = (osPriority_t) osPriorityNormal,
 };
 /* USER CODE BEGIN PV */
+uint16_t potentiometer[TEN] = {0};
+
 CAN_Frame canTxQueue[CAN_TX_QUEUE_SIZE];
 
-DigitalOutput_Resp_Frame digital_output_data[NUMBER_OF_DIG_OUT_RES_FRAME] = {0};
-DigitalInput_Resp_Frame digital_input_data[NUMBER_OF_DIG_IN_RES_FRAME] = {0};
-DigitalOutput_Cmd_Frame digital_output_cmd_data[NUMBER_OF_DIG_OUT_CMD_FRAME] = {0};
+volatile DigitalOutput_Resp_Frame digital_output_data[NUMBER_OF_DIG_OUT_RES_FRAME] = {0};
+volatile DigitalInput_Resp_Frame digital_input_data[NUMBER_OF_DIG_IN_RES_FRAME] = {0};
+volatile DigitalOutput_Cmd_Frame digital_output_cmd_data[NUMBER_OF_DIG_OUT_CMD_FRAME] = {0};
+volatile AnalogInput_Resp_Frame analog_input_data[NUMBER_OF_ANALOG_IN_RES_FRAME] = {0};
 
 CAN_RxFrame can_rx_frame;
-bool can_rx_flag = false;
 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
 static void MX_CAN_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_TIM1_Init(void);
@@ -137,6 +141,7 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_CAN_Init();
   MX_ADC1_Init();
   MX_TIM1_Init();
@@ -153,6 +158,8 @@ int main(void)
 
   HAL_CAN_Start(&hcan);
   HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING);
+
+  HAL_ADC_Start_DMA(&hadc1, (uint32_t *)potentiometer, TEN);
 
   /* USER CODE END 2 */
 
@@ -271,7 +278,7 @@ static void MX_ADC1_Init(void)
   */
   hadc1.Instance = ADC1;
   hadc1.Init.ScanConvMode = ADC_SCAN_DISABLE;
-  hadc1.Init.ContinuousConvMode = DISABLE;
+  hadc1.Init.ContinuousConvMode = ENABLE;
   hadc1.Init.DiscontinuousConvMode = DISABLE;
   hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
@@ -284,7 +291,7 @@ static void MX_ADC1_Init(void)
   */
   sConfig.Channel = ADC_CHANNEL_5;
   sConfig.Rank = ADC_REGULAR_RANK_1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
+  sConfig.SamplingTime = ADC_SAMPLETIME_239CYCLES_5;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -504,6 +511,22 @@ static void MX_TIM3_Init(void)
 }
 
 /**
+  * Enable DMA controller clock
+  */
+static void MX_DMA_Init(void)
+{
+
+  /* DMA controller clock enable */
+  __HAL_RCC_DMA1_CLK_ENABLE();
+
+  /* DMA interrupt init */
+  /* DMA1_Channel1_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -677,6 +700,7 @@ void CANTxHandler(void *argument)
   for(;;)
   {
     CAN_Frame tx_frame;
+    uint32_t potentiometer_value = 0;
 
     // Prepare Digital Output Response Frame
     for (uint8_t i = 0; i < NUMBER_OF_DIG_OUT_RES_FRAME; i++) {
@@ -694,6 +718,18 @@ void CANTxHandler(void *argument)
     for (uint8_t i = 0; i < NUMBER_OF_DIG_IN_RES_FRAME; i++){
       tx_frame.id = DIGITAL_INPUT_RES_ID(i);
       memcpy(tx_frame.data, &digital_input_data[i].sdu, sizeof(digital_input_data[i].sdu));
+      CAN_EnqueueTxFrame(&tx_frame, canTxQueue);
+    }
+
+    // Prepare Analog Input Response Frame
+    for (uint8_t i = 0; i < TEN; i++) {
+      potentiometer_value += potentiometer[i];
+    }
+    potentiometer_value /= TEN;
+    analog_input_data[0].signal[0].analogValue = potentiometer_value;
+    for (uint8_t i = 0; i < NUMBER_OF_ANALOG_IN_RES_FRAME; i++) {
+      tx_frame.id = ANALOG_INPUT_RES_ID(i);
+      memcpy(tx_frame.data, &analog_input_data[i].sdu, sizeof(analog_input_data[i].sdu));
       CAN_EnqueueTxFrame(&tx_frame, canTxQueue);
     }
 

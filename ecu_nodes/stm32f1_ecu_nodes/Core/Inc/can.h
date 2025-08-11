@@ -16,20 +16,24 @@
 #define DIGITAL_OUTPUT_CMD_ID(n)          (0x94FF0000UL + ((n) * 0x20UL))
 #define DIGITAL_OUTPUT_RES_ID(n)          (0x94FF0800UL + ((n) * 0x20UL))
 #define DIGITAL_INPUT_RES_ID(n)           (0x94FF0A00UL + ((n) * 0x20UL))
+#define ANALOG_INPUT_RES_ID(n)            (0x94FF0D00UL + ((n) * 0x20UL))
 
 #define NUMBER_OF_DIG_OUT_CMD_FRAME       4U
 #define NUMBER_OF_DIG_OUT_RES_FRAME       8U
 #define NUMBER_OF_DIG_IN_RES_FRAME        4U
+#define NUMBER_OF_ANALOG_IN_RES_FRAME     8U
 
 // CAN Frame Signal Per Frame
 #define DIGITAL_OUT_CMD_SIGNAL_PER_FRAME  8U
 #define DIGITAL_OUT_RESP_SIGNAL_PER_FRAME 4U
 #define DIGITAL_IN_RESP_SIGNAL_PER_FRAME  8U
+#define ANALOG_IN_RESP_SIGNAL_PER_FRAME   4U
 
 // Maximum number of signals per type
 #define MAX_DIG_OUT_CMD_SIGNALS           32U
 #define MAX_DIG_OUT_RESP_SIGNALS          32U
 #define MAX_DIG_IN_RESP_SIGNALS           32U
+#define MAX_ANALOG_IN_RESP_SIGNALS        32U
 
 // Bitfield widths for Digital Output/Tx/Inputs
 #define SWITCH_CMD_BITS                   1U
@@ -40,6 +44,8 @@
 #define INPUT_STATUS_BITS                 1U
 #define FRESHNESS_BITS                    5U
 #define INPUT_EL_DIAGNOSIS_BITS           2U
+#define ANALOG_VALUE_BITS                 14U
+#define ANALOG_EL_DIAGNOSIS_BITS          2U
 
 #define DIGITAL_OUT_CMD_SWITCH_ON         0x01U
 #define DIGITAL_OUT_CMD_SWITCH_OFF        0x00U
@@ -111,6 +117,20 @@ typedef union {
   uint64_t sdu;
   DigitalInput_Resp signal[DIGITAL_IN_RESP_SIGNAL_PER_FRAME];
 } DigitalInput_Resp_Frame;
+
+/*
+ * @brief Analog Input Response (ECU -> VCU)
+ */
+typedef struct
+{
+  uint16_t analogValue   : ANALOG_VALUE_BITS;
+  uint8_t elDiagnosis    : ANALOG_EL_DIAGNOSIS_BITS;
+} AnalogInput_Resp;
+
+typedef union {
+  uint64_t sdu;
+  AnalogInput_Resp signal[ANALOG_IN_RESP_SIGNAL_PER_FRAME];
+} AnalogInput_Resp_Frame;
 
 /*
  * @brief Enqueue a CAN transmission frame
