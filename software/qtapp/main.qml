@@ -10,7 +10,7 @@ ApplicationWindow {
     width: 1024; height: 600
     minimumHeight: 600; maximumHeight: 600
     minimumWidth: 1024; maximumWidth: 1024
-//    visibility: "FullScreen"
+    visibility: "FullScreen"
     title: "Instrument Cluster"
     color: "white"
 
@@ -27,7 +27,24 @@ ApplicationWindow {
 
     property int speed: 0
     property string gear: "D"
-    property int battery: 37
+    property real delta_distance_km: 0
+    property real trip: 0
+    property real blendingFactor: 0
+    property real avg_consumption_short_term: 0
+    property real final_avg_consumption: 0
+    property real dte_km: 0
+
+    property int battery: 0
+    property real instant_consumption_kWh_per_100km: 0
+    property real energy_used_kWh_this_tick: 0
+    property real cumulative_energy_used_kWh: 0
+    property real energy_remaining_kWh: 0
+    readonly property int battery_capacity_kWh: 75
+    readonly property int initial_SoC_percent: 100
+    
+    property var analogBuffer: []      // Buffer for recent analog values
+    property int analogBufferSize: 10  // Number of samples for smoothing
+
     property string time: {
         var now = new Date()
         now.setHours(now.getHours() + 7)  // For VietNam
@@ -39,16 +56,43 @@ ApplicationWindow {
         return Qt.formatDate(now, "dd/MM/yyyy")
     }
     property string temp: "28°C"
-    property int odometer: 38923
-    property int trip: 443
+    property real odometer: 38923
 
     Timer {
         interval: 100; running: true; repeat: true
         onTriggered: {
-            speed = (speed + 1) % 181
-            battery = Math.max(0, battery + 1) % 101
             time = Qt.formatTime(new Date(), "hh:mm")
             date = Qt.formatDate(new Date(), "dd/MM/yyyy")
+
+            delta_distance_km = speed * (0.1 / 3600)
+
+            trip += delta_distance_km
+            odometer += delta_distance_km
+
+            // Calculate DTE (Distance to Empty)
+            blendingFactor = Math.min(trip / 50.0, 1.0)
+            if (trip > 0.0) {
+                avg_consumption_short_term =
+                    0.9 * avg_consumption_short_term +
+                    0.1 * consumptionFromSpeed(speed)
+            }
+            // Calculate avg_consumption_long_term
+            var avg_consumption_long_term = 0.0
+            if (trip > 0.0) {
+                avg_consumption_long_term = (cumulative_energy_used_kWh / trip) * 100
+            }
+            final_avg_consumption = Math.max((blendingFactor * avg_consumption_short_term) +
+                        ((1.0 - blendingFactor) * avg_consumption_long_term), 0.5); // kWh/100km
+            dte_km = (energy_remaining_kWh / final_avg_consumption) * 100.0;
+
+            // Calculate battery
+            instant_consumption_kWh_per_100km = consumptionFromSpeed(speed)
+            energy_used_kWh_this_tick = instant_consumption_kWh_per_100km * delta_distance_km / 100.0
+
+            cumulative_energy_used_kWh += energy_used_kWh_this_tick
+            energy_remaining_kWh = battery_capacity_kWh * (initial_SoC_percent / 100.0) - cumulative_energy_used_kWh
+
+            battery = Math.max(0, Math.min(100, (energy_remaining_kWh / battery_capacity_kWh) * 100))
         }
     }
 
@@ -186,43 +230,99 @@ ApplicationWindow {
     }
 
     Text {
-        text: "Distance"
-        x: 770
-        y: 212
+        id: tripText
+        text: "Trip"
+        x: 775
+        y: 190
         color: "#EF4D7D"
         font.family: myFont.name
-        font.pixelSize: 32
+        font.pixelSize: 28
         horizontalAlignment: Text.AlignLeft
     }
 
     Text {
-        text: "230 KM"
-        x: 770
-        y: 256
+        text: trip.toFixed(1) + " KM"
+        x: 775
+        y: tripText.y + 38
         color: "white"
         font.family: myFont.name
-        font.pixelSize: 32
+        font.pixelSize: 28
         horizontalAlignment: Text.AlignLeft
     }
 
     Text {
-        text: "Temperature"
-        x: 770
-        y: 312
+        id: distanceText
+        text: "Distance"
+        x: 775
+        y: 270
         color: "#EF4D7D"
         font.family: myFont.name
-        font.pixelSize: 32
+        font.pixelSize: 28
+        horizontalAlignment: Text.AlignLeft
+    }
+
+    Text {
+        text: dte_km.toFixed(1) + " KM"
+        x: 775
+        y: distanceText.y + 38
+        color: "white"
+        font.family: myFont.name
+        font.pixelSize: 28
+        horizontalAlignment: Text.AlignLeft
+    }
+
+    Text {
+        id: tempText
+        text: "Temperature"
+        x: 775
+        y: 350
+        color: "#EF4D7D"
+        font.family: myFont.name
+        font.pixelSize: 28
         horizontalAlignment: Text.AlignLeft
     }
 
     Text {
         text: temp
-        x: 770
-        y: 356
+        x: 775
+        y: tempText.y + 38
         color: "white"
         font.family: myFont.name
-        font.pixelSize: 32
+        font.pixelSize: 28
         horizontalAlignment: Text.AlignLeft
+    }
+
+    Rectangle {
+        id: speedRec
+        width: 128
+        height: 100
+        x: 100
+        y: 424
+        color: "transparent"
+
+        Column {
+            anchors.centerIn: parent
+            spacing: 4
+
+            Text {
+                id: speedText
+                text: speed
+                color: "white"
+                font.family: myFont.name
+                font.pixelSize: 64
+                horizontalAlignment: Text.AlignHCenter
+                anchors.horizontalCenter: parent.horizontalCenter
+            }
+
+            Text {
+                text: "KM/H"
+                color: "white"
+                font.family: myFont.name
+                font.pixelSize: 24
+                horizontalAlignment: Text.AlignHCenter
+                anchors.horizontalCenter: parent.horizontalCenter
+            }
+        }
     }
 
     Rectangle {
@@ -307,7 +407,7 @@ ApplicationWindow {
 
         Text {
             id: odometerText
-            text: odometer
+            text: odometer.toFixed(0)
             color: "white"
             font.family: myFont.name
             font.pixelSize: 32
@@ -350,10 +450,36 @@ ApplicationWindow {
         onHighBeamChanged: highBeamImage.visible = highBeam
         onLowBeamChanged: lowBeamImage.visible = lowBeam
         onParkingLightsChanged: parkingLightsImage.visible = parkingLights
+        onSpeedChanged: {
+            // Add new value to buffer
+            analogBuffer.push(analogVal)
+            if (analogBuffer.length > analogBufferSize)
+                analogBuffer.shift() // Remove oldest
+
+            // Calculate average
+            var sum = 0
+            for (var i = 0; i < analogBuffer.length; ++i)
+                sum += analogBuffer[i]
+            var avgAnalog = sum / analogBuffer.length
+
+            // Use average for speed calculation
+            speed = avgAnalog * maxSpeed / 4000;
+            speed = Math.max(minSpeed, Math.min(maxSpeed, speed));
+        }
     }
 
     function speedToRotation(speed) {
         var t = (speed - minSpeed) / (maxSpeed - minSpeed)
         return minRot + (maxRot - minRot) * t
     }
+
+    function consumptionFromSpeed(v) {
+        // Simulation coefficients (can be adjusted for your vehicle)
+        let a = 0.0006;  // air resistance coefficient
+        let b = 0.01;   // rolling resistance and drivetrain loss
+        let c = 10.0;  // fixed auxiliary load (kWh/100km)
+
+        return a * v * v + b * v + c;  // kWh/100km
+    }
+
 }

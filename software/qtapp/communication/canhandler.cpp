@@ -8,8 +8,9 @@
 #include <cstring>
 #include <QDebug>
 
-inputSignal input;
-outputSignal output;
+digInSignal digInput;
+digOutSignal digOutput;
+analogInSignal analogInput;
 uint64_t softTimer = 0;
 uint16_t tick500ms = 0;
 uint16_t prevTick500ms = 0xFFFF;
@@ -38,19 +39,27 @@ IOConfig loadIOConfig(const QString& path) {
 
     QJsonObject obj = doc.object();
 
-    if (obj.contains("inputs")) {
-        QJsonObject inputsObj = obj["inputs"].toObject();
+    if (obj.contains("digital_inputs")) {
+        QJsonObject inputsObj = obj["digital_inputs"].toObject();
         for (const QString& key : inputsObj.keys()) {
-            config.inputs[key] = static_cast<uint8_t>(inputsObj[key].toInt());
-            // qDebug() << "Input :" << key << "\t-----\t" << config.inputs[key];
+            config.digInputs[key] = static_cast<uint8_t>(inputsObj[key].toInt());
+            // qDebug() << "Input :" << key << "\t-----\t" << config.digInputs[key];
         }
     }
 
-    if (obj.contains("outputs")) {
-        QJsonObject outputsObj = obj["outputs"].toObject();
+    if (obj.contains("analog_inputs")) {
+        QJsonObject analogInputsObj = obj["analog_inputs"].toObject();
+        for (const QString& key : analogInputsObj.keys()) {
+            config.analogInputs[key] = static_cast<uint8_t>(analogInputsObj[key].toInt());
+            // qDebug() << "Analog Input:" << key << "\t-----\t" << config.analogInputs[key];
+        }
+    }
+
+    if (obj.contains("digital_outputs")) {
+        QJsonObject outputsObj = obj["digital_outputs"].toObject();
         for (const QString& key : outputsObj.keys()) {
-            config.outputs[key] = static_cast<uint8_t>(outputsObj[key].toInt());
-            // qDebug() << "Output:" << key << "\t-----\t" << config.outputs[key];
+            config.digOutputs[key] = static_cast<uint8_t>(outputsObj[key].toInt());
+            // qDebug() << "Output:" << key << "\t-----\t" << config.digOutputs[key];
         }
     }
 
@@ -108,80 +117,80 @@ void CanTxThread::run() {
     m_running = true;
     while (m_running) {
         if (tick500ms != prevTick500ms) {
-            if (output.left_front_light && output.left_rear_light) {
+            if (digOutput.left_front_light && digOutput.left_rear_light) {
                 bool on = (tick500ms % 2 == 0);
-                uint8_t left_front_val = on ? (0xC8 | output.left_front_light) : 0xC8;
-                uint8_t left_rear_val  = on ? (0xC8 | output.left_rear_light)  : 0xC8;
+                uint8_t left_front_val = on ? (0xC8 | digOutput.left_front_light) : 0xC8;
+                uint8_t left_rear_val  = on ? (0xC8 | digOutput.left_rear_light)  : 0xC8;
 
                 // Left front light frame
-                txFrame.can_id = DIGITAL_OUTPUT_CMD_ID(output.left_front_light_pos / DIGITAL_OUT_CMD_SIGNAL_PER_FRAME);
+                txFrame.can_id = DIGITAL_OUTPUT_CMD_ID(digOutput.left_front_light_pos / DIGITAL_OUT_CMD_SIGNAL_PER_FRAME);
                 memset(txFrame.data, 0, sizeof(txFrame.data));
-                txFrame.data[output.left_front_light_pos % DIGITAL_OUT_CMD_SIGNAL_PER_FRAME] = left_front_val;
+                txFrame.data[digOutput.left_front_light_pos % DIGITAL_OUT_CMD_SIGNAL_PER_FRAME] = left_front_val;
                 enqueueMessage(txFrame);
 
                 // Left rear light frame
-                txFrame.can_id = DIGITAL_OUTPUT_CMD_ID(output.left_rear_light_pos / DIGITAL_OUT_CMD_SIGNAL_PER_FRAME);
+                txFrame.can_id = DIGITAL_OUTPUT_CMD_ID(digOutput.left_rear_light_pos / DIGITAL_OUT_CMD_SIGNAL_PER_FRAME);
                 memset(txFrame.data, 0, sizeof(txFrame.data));
-                txFrame.data[output.left_rear_light_pos % DIGITAL_OUT_CMD_SIGNAL_PER_FRAME] = left_rear_val;
+                txFrame.data[digOutput.left_rear_light_pos % DIGITAL_OUT_CMD_SIGNAL_PER_FRAME] = left_rear_val;
                 enqueueMessage(txFrame);
 
-                if (input.hazard_switch) {
+                if (digInput.hazard_switch) {
                     emit hazardLightsChanged(on);
-                } else if (input.turn_left_switch) {
+                } else if (digInput.turn_left_switch) {
                     emit leftLightChanged(on);
                 }
-            } else if (output.left_front_light == false && output.left_rear_light == false) {
+            } else if (digOutput.left_front_light == false && digOutput.left_rear_light == false) {
                 // Left front light frame
-                txFrame.can_id = DIGITAL_OUTPUT_CMD_ID(output.left_front_light_pos / DIGITAL_OUT_CMD_SIGNAL_PER_FRAME);
+                txFrame.can_id = DIGITAL_OUTPUT_CMD_ID(digOutput.left_front_light_pos / DIGITAL_OUT_CMD_SIGNAL_PER_FRAME);
                 memset(txFrame.data, 0, sizeof(txFrame.data));
-                txFrame.data[output.left_front_light_pos % DIGITAL_OUT_CMD_SIGNAL_PER_FRAME] = 0xC8;
+                txFrame.data[digOutput.left_front_light_pos % DIGITAL_OUT_CMD_SIGNAL_PER_FRAME] = 0xC8;
                 enqueueMessage(txFrame);
 
                 // Left rear light frame
-                txFrame.can_id = DIGITAL_OUTPUT_CMD_ID(output.left_rear_light_pos / DIGITAL_OUT_CMD_SIGNAL_PER_FRAME);
+                txFrame.can_id = DIGITAL_OUTPUT_CMD_ID(digOutput.left_rear_light_pos / DIGITAL_OUT_CMD_SIGNAL_PER_FRAME);
                 memset(txFrame.data, 0, sizeof(txFrame.data));
-                txFrame.data[output.left_rear_light_pos % DIGITAL_OUT_CMD_SIGNAL_PER_FRAME] = 0xC8;
+                txFrame.data[digOutput.left_rear_light_pos % DIGITAL_OUT_CMD_SIGNAL_PER_FRAME] = 0xC8;
                 enqueueMessage(txFrame);
 
                 emit hazardLightsChanged(false);
                 emit leftLightChanged(false);
             }
             
-            if (output.right_front_light && output.right_rear_light) {
+            if (digOutput.right_front_light && digOutput.right_rear_light) {
                 bool on = (tick500ms % 2 == 0);
-                uint8_t right_front_val = on ? (0xC8 | output.right_front_light) : 0xC8;
-                uint8_t right_rear_val  = on ? (0xC8 | output.right_rear_light)  : 0xC8;
+                uint8_t right_front_val = on ? (0xC8 | digOutput.right_front_light) : 0xC8;
+                uint8_t right_rear_val  = on ? (0xC8 | digOutput.right_rear_light)  : 0xC8;
 
                 // Right front light frame
-                txFrame.can_id = DIGITAL_OUTPUT_CMD_ID(output.right_front_light_pos / DIGITAL_OUT_CMD_SIGNAL_PER_FRAME);
+                txFrame.can_id = DIGITAL_OUTPUT_CMD_ID(digOutput.right_front_light_pos / DIGITAL_OUT_CMD_SIGNAL_PER_FRAME);
                 memset(txFrame.data, 0, sizeof(txFrame.data));
-                txFrame.data[output.right_front_light_pos % DIGITAL_OUT_CMD_SIGNAL_PER_FRAME] = right_front_val;
+                txFrame.data[digOutput.right_front_light_pos % DIGITAL_OUT_CMD_SIGNAL_PER_FRAME] = right_front_val;
                 enqueueMessage(txFrame);
 
                 // Right rear light frame
-                txFrame.can_id = DIGITAL_OUTPUT_CMD_ID(output.right_rear_light_pos / DIGITAL_OUT_CMD_SIGNAL_PER_FRAME);
+                txFrame.can_id = DIGITAL_OUTPUT_CMD_ID(digOutput.right_rear_light_pos / DIGITAL_OUT_CMD_SIGNAL_PER_FRAME);
                 memset(txFrame.data, 0, sizeof(txFrame.data));
-                txFrame.data[output.right_rear_light_pos % DIGITAL_OUT_CMD_SIGNAL_PER_FRAME] = right_rear_val;
+                txFrame.data[digOutput.right_rear_light_pos % DIGITAL_OUT_CMD_SIGNAL_PER_FRAME] = right_rear_val;
                 enqueueMessage(txFrame);
 
-                if (input.hazard_switch) {
+                if (digInput.hazard_switch) {
                     emit hazardLightsChanged(on);
-                } else if (input.turn_right_switch) {
+                } else if (digInput.turn_right_switch) {
                     emit rightLightChanged(on);
                 }
-            } else if (output.right_front_light == false && output.right_rear_light == false) {
+            } else if (digOutput.right_front_light == false && digOutput.right_rear_light == false) {
                 // Right front light frame
-                txFrame.can_id = DIGITAL_OUTPUT_CMD_ID(output.right_front_light_pos / DIGITAL_OUT_CMD_SIGNAL_PER_FRAME);
+                txFrame.can_id = DIGITAL_OUTPUT_CMD_ID(digOutput.right_front_light_pos / DIGITAL_OUT_CMD_SIGNAL_PER_FRAME);
                 memset(txFrame.data, 0, sizeof(txFrame.data));
-                txFrame.data[output.right_front_light_pos % DIGITAL_OUT_CMD_SIGNAL_PER_FRAME] = 0xC8;
+                txFrame.data[digOutput.right_front_light_pos % DIGITAL_OUT_CMD_SIGNAL_PER_FRAME] = 0xC8;
                 enqueueMessage(txFrame);
 
                 // Right rear light frame
-                txFrame.can_id = DIGITAL_OUTPUT_CMD_ID(output.right_rear_light_pos / DIGITAL_OUT_CMD_SIGNAL_PER_FRAME);
+                txFrame.can_id = DIGITAL_OUTPUT_CMD_ID(digOutput.right_rear_light_pos / DIGITAL_OUT_CMD_SIGNAL_PER_FRAME);
                 memset(txFrame.data, 0, sizeof(txFrame.data));
-                txFrame.data[output.right_rear_light_pos % DIGITAL_OUT_CMD_SIGNAL_PER_FRAME] = 0xC8;
+                txFrame.data[digOutput.right_rear_light_pos % DIGITAL_OUT_CMD_SIGNAL_PER_FRAME] = 0xC8;
                 enqueueMessage(txFrame);
-                
+
                 emit hazardLightsChanged(false);
                 emit rightLightChanged(false);
             }
@@ -228,31 +237,32 @@ void CanRxThread::run() {
     struct sockaddr_can addr;
     struct ifreq ifr;
     struct can_frame rx_frame;
-    inputSignal prevInput;
-    uint8_t signal_idx = 0xFF;
-    uint32_t signal_canid = 0;
+    digInSignal prevInput;
+    uint8_t signalIdx = 0xFF;
+    uint32_t signalCANID = 0;
     uint8_t signal_value = 0;
-    
+    int analogValue = 0;
+
     IOConfig config = loadIOConfig(":/io_configs/io_config.json"); // Load the IO configuration from a JSON file
-    if (config.inputs.isEmpty() || config.outputs.isEmpty()) {
+    if (config.digInputs.isEmpty() || config.analogInputs.isEmpty() || config.digOutputs.isEmpty()) {
         qWarning() << "Failed to load IO configuration.";
         return; // Exit if configuration loading fails
     }
 
-    for (auto it = config.outputs.constBegin(); it != config.outputs.constEnd(); ++it) {
-        signal_idx = static_cast<uint8_t>(it.value());
+    for (auto it = config.digOutputs.constBegin(); it != config.digOutputs.constEnd(); ++it) {
+        signalIdx = static_cast<uint8_t>(it.value());
         if (it.key() == "left_front_light") {
-            output.left_front_light_pos = signal_idx;
-            qDebug() << "Left front light position set to:" << signal_idx;
+            digOutput.left_front_light_pos = signalIdx;
+            qDebug() << "Left front light position set to:" << signalIdx;
         } else if (it.key() == "left_rear_light") {
-            output.left_rear_light_pos = signal_idx;
-            qDebug() << "Left rear light position set to:" << signal_idx;
+            digOutput.left_rear_light_pos = signalIdx;
+            qDebug() << "Left rear light position set to:" << signalIdx;
         } else if (it.key() == "right_front_light") {
-            output.right_front_light_pos = signal_idx;
-            qDebug() << "Right front light position set to:" << signal_idx;
+            digOutput.right_front_light_pos = signalIdx;
+            qDebug() << "Right front light position set to:" << signalIdx;
         } else if (it.key() == "right_rear_light") {
-            output.right_rear_light_pos = signal_idx;
-            qDebug() << "Right rear light position set to:" << signal_idx;
+            digOutput.right_rear_light_pos = signalIdx;
+            qDebug() << "Right rear light position set to:" << signalIdx;
         }
     }
 
@@ -279,118 +289,130 @@ void CanRxThread::run() {
         int nbytes = read(m_socket, &rx_frame, sizeof(struct can_frame));
         if (nbytes > 0) {
             // Check for input responses
-            for (auto it = config.inputs.constBegin(); it != config.inputs.constEnd(); ++it) {
-                signal_idx = static_cast<uint8_t>(it.value());
+            for (auto it = config.digInputs.constBegin(); it != config.digInputs.constEnd(); ++it) {
+                signalIdx = static_cast<uint8_t>(it.value());
                 if (it.key() == "ignition") {
-                    signal_canid = DIGITAL_INPUT_RES_ID(signal_idx / DIGITAL_IN_RESP_SIGNAL_PER_FRAME);
-                    signal_value = rx_frame.data[signal_idx % DIGITAL_IN_RESP_SIGNAL_PER_FRAME] & 0x01;
-                    if (rx_frame.can_id == signal_canid) {
-                        if (input.ignition != signal_value) {
-                            input.ignition = signal_value;
-                            qDebug() << "Ignition status changed:" << input.ignition;
+                    signalCANID = DIGITAL_INPUT_RES_ID(signalIdx / DIGITAL_IN_RESP_SIGNAL_PER_FRAME);
+                    signal_value = rx_frame.data[signalIdx % DIGITAL_IN_RESP_SIGNAL_PER_FRAME] & 0x01;
+                    if (rx_frame.can_id == signalCANID) {
+                        if (digInput.ignition != signal_value) {
+                            digInput.ignition = signal_value;
+                            qDebug() << "Ignition status changed:" << digInput.ignition;
                         }
                     }
                 }
                 else if (it.key() == "turn_left_switch") {
-                    if (input.ignition == false) continue;
-                    signal_canid = DIGITAL_INPUT_RES_ID(signal_idx / DIGITAL_IN_RESP_SIGNAL_PER_FRAME);
-                    signal_value = rx_frame.data[signal_idx % DIGITAL_IN_RESP_SIGNAL_PER_FRAME] & 0x01;
-                    if (rx_frame.can_id == signal_canid) {
-                        if (input.turn_left_switch != signal_value) {
-                            input.turn_left_switch = signal_value;
+                    if (digInput.ignition == false) continue;
+                    signalCANID = DIGITAL_INPUT_RES_ID(signalIdx / DIGITAL_IN_RESP_SIGNAL_PER_FRAME);
+                    signal_value = rx_frame.data[signalIdx % DIGITAL_IN_RESP_SIGNAL_PER_FRAME] & 0x01;
+                    if (rx_frame.can_id == signalCANID) {
+                        if (digInput.turn_left_switch != signal_value) {
+                            digInput.turn_left_switch = signal_value;
                         }
                     }
                 } else if (it.key() == "turn_right_switch") {
-                    if (input.ignition == false) continue;
-                    signal_canid = DIGITAL_INPUT_RES_ID(signal_idx / DIGITAL_IN_RESP_SIGNAL_PER_FRAME);
-                    signal_value = rx_frame.data[signal_idx % DIGITAL_IN_RESP_SIGNAL_PER_FRAME] & 0x01;
-                    if (rx_frame.can_id == signal_canid) {
-                        if (input.turn_right_switch != signal_value) {
-                            input.turn_right_switch = signal_value;
+                    if (digInput.ignition == false) continue;
+                    signalCANID = DIGITAL_INPUT_RES_ID(signalIdx / DIGITAL_IN_RESP_SIGNAL_PER_FRAME);
+                    signal_value = rx_frame.data[signalIdx % DIGITAL_IN_RESP_SIGNAL_PER_FRAME] & 0x01;
+                    if (rx_frame.can_id == signalCANID) {
+                        if (digInput.turn_right_switch != signal_value) {
+                            digInput.turn_right_switch = signal_value;
                         }
                     }
                 } else if (it.key() == "hazard_switch") {
-                    if (input.ignition == false) continue;
-                    signal_canid = DIGITAL_INPUT_RES_ID(signal_idx / DIGITAL_IN_RESP_SIGNAL_PER_FRAME);
-                    signal_value = rx_frame.data[signal_idx % DIGITAL_IN_RESP_SIGNAL_PER_FRAME] & 0x01;
-                    if (rx_frame.can_id == signal_canid) {
-                        if (input.hazard_switch != signal_value) {
-                            input.hazard_switch = signal_value;
+                    if (digInput.ignition == false) continue;
+                    signalCANID = DIGITAL_INPUT_RES_ID(signalIdx / DIGITAL_IN_RESP_SIGNAL_PER_FRAME);
+                    signal_value = rx_frame.data[signalIdx % DIGITAL_IN_RESP_SIGNAL_PER_FRAME] & 0x01;
+                    if (rx_frame.can_id == signalCANID) {
+                        if (digInput.hazard_switch != signal_value) {
+                            digInput.hazard_switch = signal_value;
                         }
                     }
                 } else if (it.key() == "high_beam_switch") {
-                    if (input.ignition == false) continue;
-                    signal_canid = DIGITAL_INPUT_RES_ID(signal_idx / DIGITAL_IN_RESP_SIGNAL_PER_FRAME);
-                    signal_value = rx_frame.data[signal_idx % DIGITAL_IN_RESP_SIGNAL_PER_FRAME] & 0x01;
-                    if (rx_frame.can_id == signal_canid) {
-                        if (input.high_beam_switch != signal_value) {
-                            input.high_beam_switch = signal_value;
-                            qDebug() << "High beam switch status changed:" << input.high_beam_switch;
-                            emit highBeamChanged(input.high_beam_switch);
+                    if (digInput.ignition == false) continue;
+                    signalCANID = DIGITAL_INPUT_RES_ID(signalIdx / DIGITAL_IN_RESP_SIGNAL_PER_FRAME);
+                    signal_value = rx_frame.data[signalIdx % DIGITAL_IN_RESP_SIGNAL_PER_FRAME] & 0x01;
+                    if (rx_frame.can_id == signalCANID) {
+                        if (digInput.high_beam_switch != signal_value) {
+                            digInput.high_beam_switch = signal_value;
+                            emit highBeamChanged(digInput.high_beam_switch);
                         }
                     }
                 } else if (it.key() == "low_beam_switch") {
-                    if (input.ignition == false) continue;
-                    signal_canid = DIGITAL_INPUT_RES_ID(signal_idx / DIGITAL_IN_RESP_SIGNAL_PER_FRAME);
-                    signal_value = rx_frame.data[signal_idx % DIGITAL_IN_RESP_SIGNAL_PER_FRAME] & 0x01;
-                    if (rx_frame.can_id == signal_canid) {
-                        if (input.low_beam_switch != signal_value) {
-                            input.low_beam_switch = signal_value;
-                            qDebug() << "Low beam switch status changed:" << input.low_beam_switch;
-                            emit lowBeamChanged(input.low_beam_switch);
+                    if (digInput.ignition == false) continue;
+                    signalCANID = DIGITAL_INPUT_RES_ID(signalIdx / DIGITAL_IN_RESP_SIGNAL_PER_FRAME);
+                    signal_value = rx_frame.data[signalIdx % DIGITAL_IN_RESP_SIGNAL_PER_FRAME] & 0x01;
+                    if (rx_frame.can_id == signalCANID) {
+                        if (digInput.low_beam_switch != signal_value) {
+                            digInput.low_beam_switch = signal_value;
+                            emit lowBeamChanged(digInput.low_beam_switch);
                         }
                     }
                 } else if (it.key() == "parking_lights_switch") {
-                    if (input.ignition == false) continue;
-                    signal_canid = DIGITAL_INPUT_RES_ID(signal_idx / DIGITAL_IN_RESP_SIGNAL_PER_FRAME);
-                    signal_value = rx_frame.data[signal_idx % DIGITAL_IN_RESP_SIGNAL_PER_FRAME] & 0x01;
-                    if (rx_frame.can_id == signal_canid) {
-                        if (input.parking_lights_switch != signal_value) {
-                            input.parking_lights_switch = signal_value;
-                            qDebug() << "Parking lights switch status changed:" << input.parking_lights_switch;
-                            emit parkingLightsChanged(input.parking_lights_switch);
+                    if (digInput.ignition == false) continue;
+                    signalCANID = DIGITAL_INPUT_RES_ID(signalIdx / DIGITAL_IN_RESP_SIGNAL_PER_FRAME);
+                    signal_value = rx_frame.data[signalIdx % DIGITAL_IN_RESP_SIGNAL_PER_FRAME] & 0x01;
+                    if (rx_frame.can_id == signalCANID) {
+                        if (digInput.parking_lights_switch != signal_value) {
+                            digInput.parking_lights_switch = signal_value;
+                            emit parkingLightsChanged(digInput.parking_lights_switch);
                         }
                     }
                 }
 
-                if (input.hazard_switch && input.hazard_switch != prevInput.hazard_switch) {
+                if (digInput.hazard_switch && digInput.hazard_switch != prevInput.hazard_switch) {
                     softTimer = 0;
                     tick500ms = 0;
                     prevTick500ms = 0xFFFF;
-                    output.left_front_light = true;
-                    output.left_rear_light = true;
-                    output.right_front_light = true;
-                    output.right_rear_light = true;
-                } else if (input.turn_left_switch && input.turn_left_switch != prevInput.turn_left_switch) {
+                    digOutput.left_front_light = true;
+                    digOutput.left_rear_light = true;
+                    digOutput.right_front_light = true;
+                    digOutput.right_rear_light = true;
+                } else if (digInput.turn_left_switch && digInput.turn_left_switch != prevInput.turn_left_switch) {
                     softTimer = 0;
                     tick500ms = 0;
                     prevTick500ms = 0xFFFF;
-                    output.left_front_light = true;
-                    output.left_rear_light = true;
-                    output.right_front_light = false;
-                    output.right_rear_light = false;
-                } else if (input.turn_right_switch && input.turn_right_switch != prevInput.turn_right_switch) {
+                    digOutput.left_front_light = true;
+                    digOutput.left_rear_light = true;
+                    digOutput.right_front_light = false;
+                    digOutput.right_rear_light = false;
+                } else if (digInput.turn_right_switch && digInput.turn_right_switch != prevInput.turn_right_switch) {
                     softTimer = 0;
                     tick500ms = 0;
                     prevTick500ms = 0xFFFF;
-                    output.left_front_light = false;
-                    output.left_rear_light = false;
-                    output.right_front_light = true;
-                    output.right_rear_light = true;
-                } else if ((input.hazard_switch == false && input.turn_left_switch == false && input.turn_right_switch == false) && 
+                    digOutput.left_front_light = false;
+                    digOutput.left_rear_light = false;
+                    digOutput.right_front_light = true;
+                    digOutput.right_rear_light = true;
+                } else if ((digInput.hazard_switch == false && digInput.turn_left_switch == false && digInput.turn_right_switch == false) && 
                            (prevInput.hazard_switch || prevInput.turn_left_switch || prevInput.turn_right_switch)) {
                     softTimer = 0;
                     tick500ms = 0;
                     prevTick500ms = 0xFFFF;
-                    output.left_front_light = false;
-                    output.left_rear_light = false;
-                    output.right_front_light = false;
-                    output.right_rear_light = false;
+                    digOutput.left_front_light = false;
+                    digOutput.left_rear_light = false;
+                    digOutput.right_front_light = false;
+                    digOutput.right_rear_light = false;
+                }
+            }
+
+            for (auto it = config.analogInputs.constBegin(); it != config.analogInputs.constEnd(); ++it) {
+                signalIdx = static_cast<uint8_t>(it.value());
+                if (it.key() == "speed") {
+                    signalCANID = ANALOG_INPUT_RES_ID(signalIdx / ANALOG_IN_RESP_SIGNAL_PER_FRAME);
+                    analogValue = ((rx_frame.data[(signalIdx % ANALOG_IN_RESP_SIGNAL_PER_FRAME) + 1] & 0xCF) << 8) | (rx_frame.data[signalIdx % ANALOG_IN_RESP_SIGNAL_PER_FRAME] & 0xFF);
+                    if (rx_frame.can_id == signalCANID) {
+                        if (analogInput.speed != analogValue) {
+                            analogInput.speed = analogValue;
+                            // qDebug() << "Speed status changed:" << analogInput.speed;
+                            emit speedChanged(analogInput.speed);
+                        }
+                    }
                 }
             }
         }
 
-        memcpy(&prevInput, &input, sizeof(inputSignal));
+        memcpy(&prevInput, &digInput, sizeof(digInSignal));
     }
     close(m_socket);
 }
@@ -409,10 +431,6 @@ void DataProcessing::DataProcessingTask() {
 CanHandler::CanHandler(QObject *parent)
     : QObject(parent)
 {
-    // Set CAN parameters and bring up interface
-    system(IP_CMD_SET_CAN0_PARAMS);
-    system(IP_CMD_UP_CAN0);
-
     m_txThread = new CanTxThread(this);
     m_rxThread = new CanRxThread(this);
     m_dataProcessing = new DataProcessing();
@@ -423,6 +441,7 @@ CanHandler::CanHandler(QObject *parent)
     connect(m_rxThread, &CanRxThread::highBeamChanged, this, &CanHandler::highBeamChanged);
     connect(m_rxThread, &CanRxThread::lowBeamChanged, this, &CanHandler::lowBeamChanged);
     connect(m_rxThread, &CanRxThread::parkingLightsChanged, this, &CanHandler::parkingLightsChanged);
+    connect(m_rxThread, &CanRxThread::speedChanged, this, &CanHandler::speedChanged);
 
     m_txThread->start();
     m_rxThread->start();

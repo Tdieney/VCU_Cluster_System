@@ -15,8 +15,6 @@ int main(int argc, char *argv[])
     CanHandler canHandler; // Create an instance of CanHandler
 
     QObject::connect(&app, &QCoreApplication::aboutToQuit, [](){
-        system(IP_CMD_DOWN_CAN0);
-        qDebug() << "CAN interface down command executed.";
         return 0; // Ensure the application exits cleanly
     });
 
