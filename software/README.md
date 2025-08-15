@@ -67,7 +67,9 @@ make
 
 ### Yocto Integration
 
-Please refer to this documentation for Yocto integration: [Bring up Qt UI](4.%20Bring%20up%20Qt%20UI.md)
+Please refer to this documentation for Yocto integration:
+[Integrating Qt into a Yocto Project](4.%20Integrating%20Qt%20into%20a%20Yocto%20Project.md)
+
 ## Configuration
 
 - **IO Mapping**: Edit `io_configs/io_config.json` to map signals to specific positions.

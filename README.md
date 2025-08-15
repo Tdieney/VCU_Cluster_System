@@ -65,10 +65,10 @@ A simulated automotive system featuring a **Digital Instrument Cluster (IPC)** a
 - [ECU Nodes](ecu_nodes/README.md)
 - [3D case](hardware/README.md)
 - [VCU software overview](software/README.md)
-- [Build image for Raspberry Pi 5.md](docs/yocto/1.%20Build%20image%20for%20Raspberry%20Pi%205.md)
-- [CAN Communication.md](docs/yocto/2.%20CAN%20Communication.md)
-- [Systemd startup script.md](docs/yocto/3.%20Systemd%20startup%20script.md)
-- [Bring up Qt UI.md](docs/yocto/4.%20Bring%20up%20Qt%20UI.md)
+- [Build image for Raspberry Pi 5](docs/yocto/1.%20Build%20image%20for%20Raspberry%20Pi%205.md)
+- [CAN Communication](docs/yocto/2.%20CAN%20Communication.md)
+- [Systemd startup script](docs/yocto/3.%20Systemd%20startup%20script.md)
+- [Integrating Qt into a Yocto Project](4.%20Integrating%20Qt%20into%20a%20Yocto%20Project.md)
 
 
 ## Contributing
