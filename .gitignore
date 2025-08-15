@@ -39,7 +39,6 @@ build/
 *.qmake.stash
 *.qmake.cache
 moc_*
-ui_*
 qrc_*
 *.user
 *.autosave
