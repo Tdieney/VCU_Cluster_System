@@ -71,7 +71,6 @@ A simulated automotive system featuring a **Digital Instrument Cluster (IPC)** a
 - [Integrating Qt into a Yocto Project](docs/yocto/4.%20Integrating%20Qt%20into%20a%20Yocto%20Project.md)
 - [Auto-launch Qt application](docs/yocto/5.%20Auto-launch%20Qt%20application.md)
 
-
 ## Contributing
 
 1. Fork the repository.
