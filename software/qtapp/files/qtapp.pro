@@ -11,7 +11,6 @@ SOURCES += \
 HEADERS += communication/canhandler.h
 
 RESOURCES += qml.qrc \
-    Configs.qrc \
     Fonts.qrc \
     Images.qrc
 

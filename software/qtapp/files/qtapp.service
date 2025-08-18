@@ -1,0 +1,15 @@
+[Unit]
+Description=Qt Instrument Cluster Application
+After=my-startup.service
+
+[Service]
+Environment=QT_QPA_PLATFORM=wayland
+Environment=XDG_RUNTIME_DIR=/tmp/runtime-root
+ExecStart=/usr/bin/qtapp
+Restart=always
+User=root
+WorkingDirectory=/usr/bin
+
+[Install]
+WantedBy=multi-user.target
+

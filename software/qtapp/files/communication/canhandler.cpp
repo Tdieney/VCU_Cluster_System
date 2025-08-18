@@ -243,7 +243,7 @@ void CanRxThread::run() {
     uint8_t signal_value = 0;
     int analogValue = 0;
 
-    IOConfig config = loadIOConfig(":/io_configs/io_config.json"); // Load the IO configuration from a JSON file
+    IOConfig config = loadIOConfig("io_configs/io_config.json"); // Load the IO configuration from a JSON file
     if (config.digInputs.isEmpty() || config.analogInputs.isEmpty() || config.digOutputs.isEmpty()) {
         qWarning() << "Failed to load IO configuration.";
         return; // Exit if configuration loading fails
