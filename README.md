@@ -1,35 +1,36 @@
-# Vehicle Control Unit (VCU) Digital Instrument Cluster and for Electric Vehicles
+# Building a Vehicle Control Unit (VCU) with Digital Instrument Cluster for Electric Vehicles
 
-A simulated automotive system featuring a **Digital Instrument Cluster (IPC)** and **Vehicle Control Unit (VCU)** for electric vehicles, built on Raspberry Pi and STM32 with CAN bus communication. The VCU centrally manages vehicle states and I/O mapping, while ECU nodes (STM32-based simulator) run identical firmware with self-assigned IDs for scalability and flexibility. This project delivers a realistic automotive E/E architecture, HMI design, and CAN networking.
+A simulated automotive system featuring a **Digital Instrument Cluster (IPC)** and **Vehicle Control Unit (VCU)** for electric vehicles, built on Raspberry Pi and STM32 with CAN bus communication. The VCU centrally manages vehicle states and I/O configurations, while ECU nodes (STM32-based) run identical firmware for scalability and flexibility. This project demonstrates a zonal E/E architecture, HMI design adhering to ISO 2575 and ISO 26262 principles, and CAN networking for real-time data exchange.
 
 ## Key Features
 
-- **Digital HMI**: Qt/QML-based interface displaying speed, battery SoC, odometer, and tell-tales (ISO 2575-compliant).
-- **Vehicle State Management**: VCU handles states (OFF, ACCESSORY, READY_TO_DRIVE, CHARGING, FAULT).
-- **CAN Bus Communication**: Reliable data exchange between VCU (Raspberry Pi) and ECU nodes (STM32).
-- **I/O Mapping**: VCU controls ECU outputs based on input signals (e.g., ECU2.input1 → ECU4.output3).
-- **Diagnostics**: Two-trip DTC logic with MIL activation for fault detection.
-- **Adaptive UI**: Driving modes (Normal, Eco, Sport) and charging screen with animations.
-- **Performance**: Boot time < 2s, data latency < 100ms, HMI refresh rate ≥ 30 FPS.
+- **Digital HMI**: Qt/QML-based interface displaying speed, battery level, odometer, trip distance, external temperature, gear position (P/R/N/D), and tell-tales (e.g., turn signals, high/low beam, hazard lights) compliant with ISO 2575.
+- **Vehicle State Management**: VCU handles states like Off, Charging, and Driving, processing data from simulated ECUs.
+- **CAN Bus Communication**: Structured CAN protocol (29-bit IDs) for reliable data exchange between VCU (Raspberry Pi) and ECU nodes (STM32), supporting up to 64 digital inputs/outputs and 32 analog inputs per ECU.
+- **Dynamic I/O Configuration**: Flexible I/O mapping via JSON files, allowing runtime reconfiguration without code changes (e.g., mapping inputs like turn signals to outputs like LEDs).
+- **Real-Time Processing**: Low-latency data handling with ADC reading via DMA, FIFO queues for CAN frames, and signal-slot mechanisms in Qt.
+- **Scalability**: Zonal architecture supporting multiple ECU nodes; tested for stability under varying bus loads.
+- **Algorithms**: Battery percentage calculation based on energy consumption; Distance-to-Empty (DTE) estimation blending short-term and long-term consumption data.
 
 ## System Requirements
 
 ### Hardware
 
-- Raspberry Pi 5 (4GB RAM recommended)
-- STM32F1 for ECU nodes
-- CAN transceivers (SN65HVD230)
-- USB to CAN for Raspberry Pi (use the same CAN transceiver)
-- Sensors: rotary encoder (speed), potentiometer (SoC), push buttons
-- Waveshare 7 inch HDMI display (1024×600) for HMI
+- Raspberry Pi 5 (4GB RAM, 4-core 2.4GHz CPU)
+- STM32F103C8 (ARM Cortex-M3, 72MHz, with CAN transceiver SN65HVD230)
+- USB to CAN adapter (e.g., Makerbase CANable v1.0) for Raspberry Pi
+- Waveshare 7-inch HDMI Capacitive Touch Screen LCD (1024×600) for IPC
+- Inputs: Potentiometer (speed simulation), temperature sensor, switches/buttons (turn signals, beams, hazard, gear)
+- Outputs: LEDs (lights, indicators), buzzer
 
 ### Software
 
-- Linux OS
-- Qt5 with Qt Creator
-- STM32CubeIDE
-- SocketCAN in Linux
+- Linux OS (custom Yocto image recommended)
+- Qt 5 with Qt Creator for HMI development
+- STM32CubeIDE for ECU firmware
+- SocketCAN for Linux CAN communication
 - GCC cross-compiler for ARM
+- Yocto Project for building custom Raspberry Pi images
 
 ## Installation
 
@@ -39,37 +40,85 @@ A simulated automotive system featuring a **Digital Instrument Cluster (IPC)** a
    git clone https://github.com/Tdieney/VCU_Cluster_System.git
    cd VCU_Cluster_System
    ```
-   
-2. **Set up Raspberry Pi 5**:
 
-3. **Set up STM32**:
+2. **Set up Raspberry Pi 5 (VCU)**:  
+   Follow [Build image for Raspberry Pi 5](docs/yocto/1.%20Build%20image%20for%20Raspberry%20Pi%205.md) to create a Yocto-based Linux image with Qt and SocketCAN support.
 
-4. **Build VCU software**:
+3. **Set up STM32 (ECU Nodes)**:  
+   See [ECU Nodes](ecu_nodes/README.md) for firmware flashing, CubeMX configuration (CAN at 1Mbps, GPIO mappings), and hardware wiring.
 
-5. **Connect hardware**:
+4. **Build VCU Software**:  
+   See [VCU software overview](software/README.md) for building the Qt application, including CAN handler integration and JSON config loading.
+
+5. **3D Printed Case**:  
+   Refer to [hardware/README.md](hardware/README.md) for 3D-printed case STL files, wiring diagrams, and setup images (e.g., CAN bus connections with 120 Ohm resistors).
 
 ## Usage
 
-## Project Structure
+- Flash and power up the STM32 ECU nodes; connect via CAN bus.
+- Attach sensors and outputs as per the pin mappings in [ecu_nodes/README.md](ecu_nodes/README.md).
+- Launch the system: The HMI will display real-time data (e.g., speed from potentiometer via CAN). Interact via switches to toggle lights and observe UI updates.
+- Configure I/O: Edit `io_configs/io_config.json` for custom mappings (e.g., assign "turn_left_switch" to a new index) and reload the VCU app.
+- Monitor CAN traffic: Use tools like `candump` or PCAN-View for debugging.
+
+Demo Video: [Google Drive Link](https://drive.google.com/file/d/1FQPo_EUh4a_-FMsMQpHUV6WIgGDGTdTw/view?usp=sharing)
+
+## Workspace Structure
 
 ```
-├── firmware/         # STM32 ECU firmware
-├── vcu/              # VCU software (C++, Qt/QML)
-├── docs/             # Documentation
-├── tests/            # Unit and integration tests
-└── README.md
+.
+├── .gitignore
+├── README.md
+├── report_PoC.docx
+├── .vscode/
+│   └── settings.json
+├── docs/
+│   ├── report_vn/
+│   │   ├── Report.docx
+│   │   └── Report.pptx
+│   └── yocto/
+│       ├── 1. Build image for Raspberry Pi 5.md
+│       ├── 2. CAN Communication.md
+│       ├── 3. Systemd startup script.md
+│       ├── 4. Integrating Qt into a Yocto Project.md
+│       └── 5. Auto-launch Qt application.md
+├── ecu_nodes/
+│   ├── README.md
+│   ├── .metadata/
+│   ├── img/
+│   └── stm32f1_ecu_nodes/
+├── hardware/
+│   ├── Case_for_7inch_display_and_Pi5.stl
+│   ├── README.md
+│   └── img/
+├── software/
+│   ├── README.md
+│   ├── qtapp/
+│   └── screenshots/
 ```
 
-## Documentation
+## Illustration
+
+<p align="center">
+  <img src="software/screenshots/UI_1.png"/>
+  <img src="hardware/img/img3.png"/>
+</p>
+
+## Reports
+
+- [Detailed Project Report](docs/report_vn/Report.docx)
+- [Project Presentation](docs/report_vn/Report.pptx)
+
+## Development & Documentation
 
 - [ECU Nodes](ecu_nodes/README.md)
-- [3D case](hardware/README.md)
-- [VCU software overview](software/README.md)
+- [Hardware Setup](hardware/README.md)
+- [VCU Software Overview](software/README.md)
 - [Build image for Raspberry Pi 5](docs/yocto/1.%20Build%20image%20for%20Raspberry%20Pi%205.md)
 - [CAN Communication](docs/yocto/2.%20CAN%20Communication.md)
-- [Systemd startup script](docs/yocto/3.%20Systemd%20startup%20script.md)
+- [Systemd Startup Script](docs/yocto/3.%20Systemd%20startup%20script.md)
 - [Integrating Qt into a Yocto Project](docs/yocto/4.%20Integrating%20Qt%20into%20a%20Yocto%20Project.md)
-- [Auto-launch Qt application](docs/yocto/5.%20Auto-launch%20Qt%20application.md)
+- [Auto-launch Qt Application](docs/yocto/5.%20Auto-launch%20Qt%20application.md)
 
 ## Contributing
 
@@ -80,16 +129,15 @@ A simulated automotive system featuring a **Digital Instrument Cluster (IPC)** a
 
 ## References
 
-- ISO 26262: Functional Safety for Road Vehicles
-- ISO 2575: Symbols for Controls and Tell-tales
-- Qt Documentation: [qt.io](https://doc.qt.io)
-- USB to CAN: [CANable-MKS](https://github.com/makerbase-mks/CANable-MKS/blob/main/User%20Manual/CANable%20V2.0/Makerbase%20CANable%20V2.0%20Use%20Manual.pdf)
-- SocketCAN: [SocketCAN - Controller Area Network — The Linux Kernel documentation](https://docs.kernel.org/networking/can.html)
+- ISO 26262: Road vehicles – Functional safety (2018)
+- ISO 2575: Road vehicles – Symbols for controls, indicators and tell-tales (2024)
+- Qt Documentation: [doc.qt.io](https://doc.qt.io)
+- SocketCAN Documentation: [docs.kernel.org/networking/can.html](https://docs.kernel.org/networking/can.html)
+- Yocto Project Documentation: [docs.yoctoproject.org](https://docs.yoctoproject.org)
+- STM32 Reference Manual (RM0008): STMicroelectronics (2018)
+- CAN Protocol Tutorial: [controllerstech.com/can-protocol-in-stm32](https://controllerstech.com/can-protocol-in-stm32/)
+- Zonal Architecture Overview: Molex Technical Article (2022)
 
 ## Contact
 
 For issues or inquiries, open a GitHub issue or contact [vanthinh.nguyentran.4@gmail.com].
-
----
-
-*Demo video and system block diagram available in `docs/`.*
