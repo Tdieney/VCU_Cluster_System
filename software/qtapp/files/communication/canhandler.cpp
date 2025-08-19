@@ -397,7 +397,7 @@ void CanRxThread::run() {
             }
 
             for (auto it = config.analogInputs.constBegin(); it != config.analogInputs.constEnd(); ++it) {
-                signalIdx = static_cast<uint8_t>(it.value());
+                signalIdx = static_cast<uint8_t>(it.value()) * 2;
                 if (it.key() == "speed") {
                     signalCANID = ANALOG_INPUT_RES_ID(signalIdx / ANALOG_IN_RESP_SIGNAL_PER_FRAME);
                     analogValue = ((rx_frame.data[(signalIdx % ANALOG_IN_RESP_SIGNAL_PER_FRAME) + 1] & 0xCF) << 8) | (rx_frame.data[signalIdx % ANALOG_IN_RESP_SIGNAL_PER_FRAME] & 0xFF);
